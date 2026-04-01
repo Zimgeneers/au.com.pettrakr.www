@@ -41,15 +41,17 @@ const heroImageUrl = fileUrl(page.heroImage);
 
   <!-- Dynamic sections -->
   {sections.map(section => {
+    const bg = section.background ?? 'white';
+    const bgClass = bg === 'dark' ? 'bg-[#171D1D] text-white' : bg === 'light' ? 'bg-gray-50' : 'bg-white';
+    const isDark = bg === 'dark';
+    const headingClass = `text-3xl font-bold font-['Lato',sans-serif] mb-6`;
+    const proseClass = isDark ? 'prose prose-lg prose-invert max-w-none' : 'prose prose-lg max-w-none';
+
     if (section.type === 'text') return (
-      <section class="py-16 px-4">
+      <section class={`py-16 px-4 ${bgClass}`}>
         <div class="max-w-3xl mx-auto">
-          {section.heading && (
-            <h2 class="text-3xl font-bold font-['Lato',sans-serif] mb-6">{section.heading}</h2>
-          )}
-          {section.body && (
-            <div class="prose prose-lg max-w-none" set:html={section.body} />
-          )}
+          {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
+          {section.body && <div class={proseClass} set:html={section.body} />}
           {section.ctaText && (
             <div class="mt-8">
               <a href={section.ctaUrl || '/book'}
@@ -66,15 +68,11 @@ const heroImageUrl = fileUrl(page.heroImage);
       const imgUrl = fileUrl(section.image);
       const reversed = section.imagePosition === 'left';
       return (
-        <section class="py-16 px-4 bg-gray-50">
+        <section class={`py-16 px-4 ${bgClass}`}>
           <div class={`max-w-6xl mx-auto flex flex-col ${reversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-12 items-center`}>
             <div class="flex-1">
-              {section.heading && (
-                <h2 class="text-3xl font-bold font-['Lato',sans-serif] mb-6">{section.heading}</h2>
-              )}
-              {section.body && (
-                <div class="prose prose-lg max-w-none" set:html={section.body} />
-              )}
+              {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
+              {section.body && <div class={proseClass} set:html={section.body} />}
               {section.ctaText && (
                 <div class="mt-8">
                   <a href={section.ctaUrl || '/book'}
@@ -95,14 +93,10 @@ const heroImageUrl = fileUrl(page.heroImage);
     }
 
     if (section.type === 'cta') return (
-      <section class="py-16 px-4 bg-[#171D1D] text-white text-center">
+      <section class={`py-16 px-4 text-center ${bgClass}`}>
         <div class="max-w-3xl mx-auto">
-          {section.heading && (
-            <h2 class="text-3xl font-bold font-['Lato',sans-serif] mb-6">{section.heading}</h2>
-          )}
-          {section.body && (
-            <div class="prose prose-lg prose-invert max-w-none mb-8" set:html={section.body} />
-          )}
+          {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
+          {section.body && <div class={`${proseClass} mb-8`} set:html={section.body} />}
           {section.ctaText && (
             <a href={section.ctaUrl || '/book'}
               class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg">

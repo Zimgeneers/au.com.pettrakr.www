@@ -52,6 +52,7 @@ export interface Section {
   ctaUrl: string;
   image: string | null;
   imagePosition: string;
+  background: 'white' | 'light' | 'dark' | null;
 }
 
 export interface Airline {
