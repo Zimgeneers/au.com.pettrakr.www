@@ -122,17 +122,17 @@ const heroImageUrl = fileUrl(page.heroImage);
       <div class="max-w-6xl mx-auto text-center">
         <h2 class="text-3xl font-bold font-['Lato',sans-serif] text-white mb-4">Airline Approvals</h2>
         <p class="text-white/70 mb-12">The ZiSO PetTrakr device has been rigorously tested and approved for use on the following airlines.</p>
-        <div class="flex flex-wrap justify-center items-center gap-8">
+        <div class="grid grid-cols-3 md:grid-cols-6 gap-4">
           {airlines.map(airline => {
             const logoUrl = fileUrl(airline.logo);
             const href = airline.approvalUrl || airline.website || null;
             return logoUrl ? (
               href
                 ? <a href={href} target="_blank" rel="noopener noreferrer" title={airline.name}
-                    class="bg-white rounded-xl p-4 hover:opacity-90 transition-opacity w-44 h-36 flex items-center justify-center">
+                    class="bg-white rounded-xl p-4 hover:opacity-90 transition-opacity aspect-square flex items-center justify-center">
                     <img src={logoUrl} alt={airline.name} class="w-full h-full object-contain" />
                   </a>
-                : <div class="bg-white rounded-xl p-4 w-44 h-36 flex items-center justify-center">
+                : <div class="bg-white rounded-xl p-4 aspect-square flex items-center justify-center">
                     <img src={logoUrl} alt={airline.name} class="w-full h-full object-contain" />
                   </div>
             ) : (
