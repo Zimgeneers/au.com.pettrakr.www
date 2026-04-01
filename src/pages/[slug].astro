@@ -1,17 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import SectionRenderer from '../components/sections/SectionRenderer.astro';
-import { getNavigation, fileUrl } from '../lib/directus';
+import { getPageBySlug, getSectionsByPage, fileUrl } from '../lib/directus';
 
-// For static output we need to pre-generate all page slugs
 export async function getStaticPaths() {
   const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL ?? 'https://admin.pettrakr.io';
   const res = await fetch(`${DIRECTUS_URL}/items/pages?fields=slug&filter[slug][_neq]=home`);
   const json = await res.json();
   return (json.data as { slug: string }[]).map(p => ({ params: { slug: p.slug } }));
 }
-
-import { getPageBySlug, getSectionsByPage } from '../lib/directus';
 
 const { slug } = Astro.params;
 const page = await getPageBySlug(slug);
