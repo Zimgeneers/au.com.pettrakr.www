@@ -60,6 +60,7 @@ export interface Airline {
   iataCode: string;
   logo: string | null;
   website: string;
+  approvalUrl: string | null;
   status: string;
 }
 
@@ -69,23 +70,26 @@ export function fileUrl(id: string | null): string | null {
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
-  return fetchDirectus<SiteSettings>('/items/site_settings/1?fields=siteName,tagline,contactEmail,phone,address,abn,facebook,linkedin,logo,favicon');
+  return fetchDirectus<SiteSettings>('/items/site_settings/1?fields=*');
 }
 
 export async function getNavigation(): Promise<NavItem[]> {
-  return fetchDirectus<NavItem[]>('/items/navigation?sort=sort&fields=id,label,url,sort,parent');
+  return fetchDirectus<NavItem[]>('/items/navigation?sort=sort&fields=*');
 }
 
 export async function getPageBySlug(slug: string): Promise<Page> {
-  const pages = await fetchDirectus<Page[]>(`/items/pages?filter[slug][_eq]=${slug}&fields=id,slug,title,heroHeading,heroSubheading,heroCtaText,heroCtaUrl,heroImage,seoTitle,seoDescription,seoImage&limit=1`);
+  const params = new URLSearchParams({ 'filter[slug][_eq]': slug, 'fields': '*', 'limit': '1' });
+  const pages = await fetchDirectus<Page[]>(`/items/pages?${params}`);
   if (!pages.length) throw new Error(`Page not found: ${slug}`);
   return pages[0];
 }
 
 export async function getSectionsByPage(pageId: number): Promise<Section[]> {
-  return fetchDirectus<Section[]>(`/items/sections?filter[page][_eq]=${pageId}&sort=sort&fields=id,type,sort,heading,body,ctaText,ctaUrl,image,imagePosition`);
+  const params = new URLSearchParams({ 'filter[page][_eq]': String(pageId), 'sort': 'sort', 'fields': '*' });
+  return fetchDirectus<Section[]>(`/items/sections?${params}`);
 }
 
 export async function getApprovedAirlines(): Promise<Airline[]> {
-  return fetchDirectus<Airline[]>('/items/airlines?filter[status][_eq]=approved&sort=name&fields=id,name,iataCode,logo,website,status');
+  const params = new URLSearchParams({ 'filter[status][_eq]': 'approved', 'sort': 'name', 'fields': '*' });
+  return fetchDirectus<Airline[]>(`/items/airlines?${params}`);
 }

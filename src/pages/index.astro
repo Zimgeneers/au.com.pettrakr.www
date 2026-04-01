@@ -125,10 +125,13 @@ const heroImageUrl = fileUrl(page.heroImage);
         <div class="flex flex-wrap justify-center items-center gap-8">
           {airlines.map(airline => {
             const logoUrl = fileUrl(airline.logo);
+            const href = airline.approvalUrl || airline.website || null;
             return logoUrl ? (
-              <a href={airline.website || '#'} target="_blank" rel="noopener noreferrer" title={airline.name}>
-                <img src={logoUrl} alt={airline.name} class="h-16 w-auto object-contain filter brightness-0 invert opacity-80 hover:opacity-100 transition-opacity" />
-              </a>
+              href
+                ? <a href={href} target="_blank" rel="noopener noreferrer" title={airline.name}>
+                    <img src={logoUrl} alt={airline.name} class="h-16 w-auto object-contain filter brightness-0 invert opacity-80 hover:opacity-100 transition-opacity" />
+                  </a>
+                : <img src={logoUrl} alt={airline.name} class="h-16 w-auto object-contain filter brightness-0 invert opacity-70" />
             ) : (
               <span class="text-white/60 font-bold text-sm">{airline.name}</span>
             );
