@@ -1,17 +1,141 @@
 ---
+import Layout from '../layouts/Layout.astro';
+import { getPageBySlug, getSectionsByPage, getApprovedAirlines, fileUrl } from '../lib/directus';
 
+const page = await getPageBySlug('home');
+const sections = await getSectionsByPage(page.id);
+const airlines = await getApprovedAirlines();
+
+const heroImageUrl = fileUrl(page.heroImage);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout
+  title={page.seoTitle || page.title}
+  description={page.seoDescription}
+  ogImage={fileUrl(page.seoImage)}
+>
+
+  <!-- Hero -->
+  <section
+    class="relative min-h-[80vh] flex items-center justify-center text-white text-center"
+    style={heroImageUrl ? `background-image: url('${heroImageUrl}'); background-size: cover; background-position: center;` : 'background-color: #171D1D;'}
+  >
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative z-10 max-w-3xl mx-auto px-4">
+      <h1 class="text-4xl md:text-5xl font-bold font-['Lato',sans-serif] mb-6 leading-tight">
+        {page.heroHeading}
+      </h1>
+      {page.heroSubheading && (
+        <p class="text-lg md:text-xl mb-8 text-white/80">{page.heroSubheading}</p>
+      )}
+      {page.heroCtaText && (
+        <a
+          href={page.heroCtaUrl || '/book'}
+          class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg"
+        >
+          {page.heroCtaText}
+        </a>
+      )}
+    </div>
+  </section>
+
+  <!-- Dynamic sections -->
+  {sections.map(section => {
+    if (section.type === 'text') return (
+      <section class="py-16 px-4">
+        <div class="max-w-3xl mx-auto">
+          {section.heading && (
+            <h2 class="text-3xl font-bold font-['Lato',sans-serif] mb-6">{section.heading}</h2>
+          )}
+          {section.body && (
+            <div class="prose prose-lg max-w-none" set:html={section.body} />
+          )}
+          {section.ctaText && (
+            <div class="mt-8">
+              <a href={section.ctaUrl || '/book'}
+                class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors">
+                {section.ctaText}
+              </a>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+
+    if (section.type === 'text_image') {
+      const imgUrl = fileUrl(section.image);
+      const reversed = section.imagePosition === 'left';
+      return (
+        <section class="py-16 px-4 bg-gray-50">
+          <div class={`max-w-6xl mx-auto flex flex-col ${reversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-12 items-center`}>
+            <div class="flex-1">
+              {section.heading && (
+                <h2 class="text-3xl font-bold font-['Lato',sans-serif] mb-6">{section.heading}</h2>
+              )}
+              {section.body && (
+                <div class="prose prose-lg max-w-none" set:html={section.body} />
+              )}
+              {section.ctaText && (
+                <div class="mt-8">
+                  <a href={section.ctaUrl || '/book'}
+                    class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors">
+                    {section.ctaText}
+                  </a>
+                </div>
+              )}
+            </div>
+            {imgUrl && (
+              <div class="flex-1 flex justify-center">
+                <img src={imgUrl} alt={section.heading} class="max-w-sm w-full rounded-lg shadow-lg" />
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    if (section.type === 'cta') return (
+      <section class="py-16 px-4 bg-[#171D1D] text-white text-center">
+        <div class="max-w-3xl mx-auto">
+          {section.heading && (
+            <h2 class="text-3xl font-bold font-['Lato',sans-serif] mb-6">{section.heading}</h2>
+          )}
+          {section.body && (
+            <div class="prose prose-lg prose-invert max-w-none mb-8" set:html={section.body} />
+          )}
+          {section.ctaText && (
+            <a href={section.ctaUrl || '/book'}
+              class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg">
+              {section.ctaText}
+            </a>
+          )}
+        </div>
+      </section>
+    );
+
+    return null;
+  })}
+
+  <!-- Airlines -->
+  {airlines.length > 0 && (
+    <section class="py-16 px-4 bg-[#171D1D]">
+      <div class="max-w-6xl mx-auto text-center">
+        <h2 class="text-3xl font-bold font-['Lato',sans-serif] text-white mb-4">Airline Approvals</h2>
+        <p class="text-white/70 mb-12">The ZiSO PetTrakr device has been rigorously tested and approved for use on the following airlines.</p>
+        <div class="flex flex-wrap justify-center items-center gap-8">
+          {airlines.map(airline => {
+            const logoUrl = fileUrl(airline.logo);
+            return logoUrl ? (
+              <a href={airline.website || '#'} target="_blank" rel="noopener noreferrer" title={airline.name}>
+                <img src={logoUrl} alt={airline.name} class="h-16 w-auto object-contain filter brightness-0 invert opacity-80 hover:opacity-100 transition-opacity" />
+              </a>
+            ) : (
+              <span class="text-white/60 font-bold text-sm">{airline.name}</span>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  )}
+
+</Layout>

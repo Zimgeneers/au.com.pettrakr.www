@@ -1,0 +1,75 @@
+---
+import { getNavigation, getSiteSettings, fileUrl } from '../lib/directus';
+
+const settings = await getSiteSettings();
+const navItems = await getNavigation();
+const logoUrl = fileUrl(settings.logo);
+const topLevel = navItems.filter(n => !n.parent);
+---
+
+<header class="bg-[#171D1D] sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-20">
+    <!-- Logo -->
+    <a href="/" class="flex-shrink-0">
+      {logoUrl
+        ? <img src={logoUrl} alt={settings.siteName} class="h-10 w-auto" />
+        : <span class="text-white font-bold text-xl">{settings.siteName}</span>
+      }
+    </a>
+
+    <!-- Desktop nav -->
+    <nav class="hidden lg:flex items-center gap-6">
+      {topLevel.map(item => (
+        <a
+          href={item.url}
+          class="text-white text-sm font-bold hover:text-[#ffc803] transition-colors"
+        >
+          {item.label}
+        </a>
+      ))}
+      <a
+        href="/book"
+        class="bg-[#E14D43] hover:bg-[#494578] text-white text-sm font-bold px-5 py-2 rounded transition-colors"
+      >
+        Reserve
+      </a>
+    </nav>
+
+    <!-- Mobile hamburger -->
+    <button
+      id="menu-toggle"
+      class="lg:hidden text-white p-2"
+      aria-label="Toggle menu"
+    >
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="hidden lg:hidden bg-[#171D1D] border-t border-white/10">
+    <nav class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      {topLevel.map(item => (
+        <a
+          href={item.url}
+          class="text-white text-sm font-bold hover:text-[#ffc803] transition-colors py-1"
+        >
+          {item.label}
+        </a>
+      ))}
+      <a
+        href="/book"
+        class="bg-[#E14D43] hover:bg-[#494578] text-white text-sm font-bold px-5 py-2 rounded transition-colors text-center mt-2"
+      >
+        Reserve
+      </a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  toggle?.addEventListener('click', () => menu?.classList.toggle('hidden'));
+</script>

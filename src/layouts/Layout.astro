@@ -1,0 +1,47 @@
+---
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { getSiteSettings, fileUrl } from '../lib/directus';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string | null;
+}
+
+const settings = await getSiteSettings();
+const { title, description, ogImage } = Astro.props;
+
+const pageTitle = title ? `${title} | ${settings.siteName}` : settings.siteName;
+const pageDescription = description ?? settings.tagline;
+const faviconUrl = fileUrl(settings.favicon);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    {faviconUrl
+      ? <link rel="icon" href={faviconUrl} />
+      : <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    }
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-white text-gray-900 flex flex-col min-h-screen font-['Work_Sans',sans-serif]">
+    <Nav />
+    <main class="flex-1">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
