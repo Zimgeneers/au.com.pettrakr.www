@@ -128,10 +128,13 @@ const heroImageUrl = fileUrl(page.heroImage);
             const href = airline.approvalUrl || airline.website || null;
             return logoUrl ? (
               href
-                ? <a href={href} target="_blank" rel="noopener noreferrer" title={airline.name}>
-                    <img src={logoUrl} alt={airline.name} class="h-16 w-auto object-contain filter brightness-0 invert opacity-80 hover:opacity-100 transition-opacity" />
+                ? <a href={href} target="_blank" rel="noopener noreferrer" title={airline.name}
+                    class="bg-white rounded-lg p-4 flex items-center justify-center hover:opacity-90 transition-opacity">
+                    <img src={logoUrl} alt={airline.name} class="h-12 w-auto object-contain" />
                   </a>
-                : <img src={logoUrl} alt={airline.name} class="h-16 w-auto object-contain filter brightness-0 invert opacity-70" />
+                : <div class="bg-white rounded-lg p-4 flex items-center justify-center">
+                    <img src={logoUrl} alt={airline.name} class="h-12 w-auto object-contain" />
+                  </div>
             ) : (
               <span class="text-white/60 font-bold text-sm">{airline.name}</span>
             );
