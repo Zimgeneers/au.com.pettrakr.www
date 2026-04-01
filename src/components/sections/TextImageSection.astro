@@ -1,0 +1,34 @@
+---
+import type { Section } from '../../lib/directus';
+import { fileUrl } from '../../lib/directus';
+import { getSectionStyle } from './sectionHelpers';
+
+interface Props { section: Section }
+const { section } = Astro.props;
+const { bgClass, bgStyle, isDark, proseClass, headingClass } = getSectionStyle(section);
+const imgUrl = fileUrl(section.image);
+const reversed = section.imagePosition === 'left';
+---
+
+<section class={`py-16 px-4 ${bgClass}`} style={bgStyle}>
+  {isDark && bgStyle.includes('background-image') && <div class="absolute inset-0 bg-black/50" />}
+  <div class={`relative max-w-6xl mx-auto flex flex-col ${reversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-12 items-center`}>
+    <div class="flex-1">
+      {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
+      {section.body && <div class={proseClass} set:html={section.body} />}
+      {section.ctaText && (
+        <div class="mt-8">
+          <a href={section.ctaUrl || '/book'}
+            class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors">
+            {section.ctaText}
+          </a>
+        </div>
+      )}
+    </div>
+    {imgUrl && (
+      <div class="flex-1 flex justify-center">
+        <img src={imgUrl} alt={section.heading} class="max-w-sm w-full rounded-lg shadow-lg" />
+      </div>
+    )}
+  </div>
+</section>

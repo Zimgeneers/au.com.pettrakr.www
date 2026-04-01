@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import SectionRenderer from '../components/sections/SectionRenderer.astro';
 import { getPageBySlug, getSectionsByPage, getApprovedAirlines, fileUrl } from '../lib/directus';
 
 const page = await getPageBySlug('home');
@@ -40,90 +41,7 @@ const heroImageUrl = fileUrl(page.heroImage);
   </section>
 
   <!-- Dynamic sections -->
-  {sections.map(section => {
-    const bg = section.background ?? 'white';
-    const bgImgUrl = fileUrl(section.backgroundImage);
-    const hasBgImg = !!bgImgUrl;
-    const isDark = bg === 'dark' || bg === 'black' || bg === 'pettrakr' || hasBgImg;
-    const bgClass = hasBgImg
-      ? 'relative text-white'
-      : bg === 'black' ? 'bg-black text-white'
-      : bg === 'pettrakr' ? 'text-white'
-      : bg === 'gray' ? 'bg-gray-100'
-      : 'bg-white';
-    const headingClass = `text-3xl font-bold font-['Lato',sans-serif] mb-6`;
-    const proseClass = isDark ? 'prose prose-lg prose-invert max-w-none' : 'prose prose-lg max-w-none';
-    const bgStyle = hasBgImg
-      ? `background-image: url('${bgImgUrl}'); background-size: cover; background-position: center; ${section.parallax ? 'background-attachment: fixed;' : ''}`
-      : bg === 'pettrakr'
-      ? 'background: linear-gradient(135deg, #171D1D 0%, #2D2B55 100%);'
-      : '';
-
-    if (section.type === 'text') return (
-      <section class={`py-16 px-4 ${bgClass}`} style={bgStyle}>
-        {hasBgImg && <div class="absolute inset-0 bg-black/50" />}
-        <div class="relative max-w-3xl mx-auto">
-          {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
-          {section.body && <div class={proseClass} set:html={section.body} />}
-          {section.ctaText && (
-            <div class="mt-8">
-              <a href={section.ctaUrl || '/book'}
-                class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors">
-                {section.ctaText}
-              </a>
-            </div>
-          )}
-        </div>
-      </section>
-    );
-
-    if (section.type === 'text_image') {
-      const imgUrl = fileUrl(section.image);
-      const reversed = section.imagePosition === 'left';
-      return (
-        <section class={`py-16 px-4 ${bgClass}`} style={bgStyle}>
-          {hasBgImg && <div class="absolute inset-0 bg-black/50" />}
-          <div class={`relative max-w-6xl mx-auto flex flex-col ${reversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-12 items-center`}>
-            <div class="flex-1">
-              {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
-              {section.body && <div class={proseClass} set:html={section.body} />}
-              {section.ctaText && (
-                <div class="mt-8">
-                  <a href={section.ctaUrl || '/book'}
-                    class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors">
-                    {section.ctaText}
-                  </a>
-                </div>
-              )}
-            </div>
-            {imgUrl && (
-              <div class="flex-1 flex justify-center">
-                <img src={imgUrl} alt={section.heading} class="max-w-sm w-full rounded-lg shadow-lg" />
-              </div>
-            )}
-          </div>
-        </section>
-      );
-    }
-
-    if (section.type === 'cta') return (
-      <section class={`py-16 px-4 text-center ${bgClass}`} style={bgStyle}>
-        {hasBgImg && <div class="absolute inset-0 bg-black/50" />}
-        <div class="relative max-w-3xl mx-auto">
-          {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
-          {section.body && <div class={`${proseClass} mb-8`} set:html={section.body} />}
-          {section.ctaText && (
-            <a href={section.ctaUrl || '/book'}
-              class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg">
-              {section.ctaText}
-            </a>
-          )}
-        </div>
-      </section>
-    );
-
-    return null;
-  })}
+  {sections.map(section => <SectionRenderer section={section} />)}
 
   <!-- Airlines -->
   {airlines.length > 0 && (

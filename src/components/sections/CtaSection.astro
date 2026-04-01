@@ -1,0 +1,22 @@
+---
+import type { Section } from '../../lib/directus';
+import { getSectionStyle } from './sectionHelpers';
+
+interface Props { section: Section }
+const { section } = Astro.props;
+const { bgClass, bgStyle, isDark, proseClass, headingClass } = getSectionStyle(section);
+---
+
+<section class={`py-16 px-4 text-center ${bgClass}`} style={bgStyle}>
+  {isDark && bgStyle.includes('background-image') && <div class="absolute inset-0 bg-black/50" />}
+  <div class="relative max-w-3xl mx-auto">
+    {section.heading && <h2 class={headingClass}>{section.heading}</h2>}
+    {section.body && <div class={`${proseClass} mb-8`} set:html={section.body} />}
+    {section.ctaText && (
+      <a href={section.ctaUrl || '/book'}
+        class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg">
+        {section.ctaText}
+      </a>
+    )}
+  </div>
+</section>

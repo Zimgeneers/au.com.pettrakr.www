@@ -1,0 +1,13 @@
+---
+import type { Section } from '../../lib/directus';
+import TextSection from './TextSection.astro';
+import TextImageSection from './TextImageSection.astro';
+import CtaSection from './CtaSection.astro';
+
+interface Props { section: Section }
+const { section } = Astro.props;
+---
+
+{section.type === 'text' && <TextSection section={section} />}
+{section.type === 'text_image' && <TextImageSection section={section} />}
+{section.type === 'cta' && <CtaSection section={section} />}
