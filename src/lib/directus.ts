@@ -53,6 +53,8 @@ export interface Section {
   image: string | null;
   imagePosition: string;
   background: 'white' | 'light' | 'dark' | null;
+  backgroundImage: string | null;
+  parallax: boolean | null;
 }
 
 export interface Airline {
