@@ -1,10 +1,18 @@
 const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL ?? 'https://admin.pettrakr.io';
 
-async function fetchDirectus<T>(path: string): Promise<T> {
-  const res = await fetch(`${DIRECTUS_URL}${path}`);
-  if (!res.ok) throw new Error(`Directus fetch failed: ${path} (${res.status})`);
-  const json = await res.json();
-  return json.data as T;
+async function fetchDirectus<T>(path: string, fallback: T): Promise<T> {
+  try {
+    const res = await fetch(`${DIRECTUS_URL}${path}`);
+    if (!res.ok) {
+      console.warn(`Directus fetch failed: ${path} (${res.status}) — using fallback`);
+      return fallback;
+    }
+    const json = await res.json();
+    return json.data as T;
+  } catch (e) {
+    console.warn(`Directus fetch error: ${path} — using fallback`);
+    return fallback;
+  }
 }
 
 export interface SiteSettings {
@@ -69,32 +77,44 @@ export interface Airline {
   status: string;
 }
 
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  siteName: 'PetTrakr',
+  tagline: '',
+  contactEmail: 'hello@pettrakr.com.au',
+  phone: '',
+  address: '',
+  abn: '',
+  facebook: '',
+  linkedin: '',
+  logo: null,
+  favicon: null,
+};
+
 export function fileUrl(id: string | null): string | null {
   if (!id) return null;
   return `${DIRECTUS_URL}/assets/${id}`;
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
-  return fetchDirectus<SiteSettings>('/items/site_settings/1?fields=*');
+  return fetchDirectus<SiteSettings>('/items/site_settings/1?fields=*', DEFAULT_SITE_SETTINGS);
 }
 
 export async function getNavigation(): Promise<NavItem[]> {
-  return fetchDirectus<NavItem[]>('/items/navigation?sort=sort&fields=*,page.slug');
+  return fetchDirectus<NavItem[]>('/items/navigation?sort=sort&fields=*,page.slug', []);
 }
 
-export async function getPageBySlug(slug: string): Promise<Page> {
+export async function getPageBySlug(slug: string): Promise<Page | null> {
   const params = new URLSearchParams({ 'filter[slug][_eq]': slug, 'fields': '*', 'limit': '1' });
-  const pages = await fetchDirectus<Page[]>(`/items/pages?${params}`);
-  if (!pages.length) throw new Error(`Page not found: ${slug}`);
-  return pages[0];
+  const pages = await fetchDirectus<Page[]>(`/items/pages?${params}`, []);
+  return pages[0] ?? null;
 }
 
 export async function getSectionsByPage(pageId: number): Promise<Section[]> {
   const params = new URLSearchParams({ 'filter[page][_eq]': String(pageId), 'sort': 'sort', 'fields': '*' });
-  return fetchDirectus<Section[]>(`/items/sections?${params}`);
+  return fetchDirectus<Section[]>(`/items/sections?${params}`, []);
 }
 
 export async function getApprovedAirlines(): Promise<Airline[]> {
   const params = new URLSearchParams({ 'filter[status][_eq]': 'approved', 'sort': 'name', 'fields': '*' });
-  return fetchDirectus<Airline[]>(`/items/airlines?${params}`);
+  return fetchDirectus<Airline[]>(`/items/airlines?${params}`, []);
 }

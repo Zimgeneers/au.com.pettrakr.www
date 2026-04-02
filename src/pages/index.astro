@@ -4,41 +4,43 @@ import SectionRenderer from '../components/sections/SectionRenderer.astro';
 import { getPageBySlug, getSectionsByPage, getApprovedAirlines, fileUrl } from '../lib/directus';
 
 const page = await getPageBySlug('home');
-const sections = await getSectionsByPage(page.id);
+const sections = page ? await getSectionsByPage(page.id) : [];
 const airlines = await getApprovedAirlines();
 
-const heroImageUrl = fileUrl(page.heroImage);
+const heroImageUrl = page ? fileUrl(page.heroImage) : null;
 ---
 
 <Layout
-  title={page.seoTitle || page.title}
-  description={page.seoDescription}
-  ogImage={fileUrl(page.seoImage)}
+  title={page?.seoTitle || page?.title}
+  description={page?.seoDescription}
+  ogImage={page ? fileUrl(page.seoImage) : null}
 >
 
   <!-- Hero -->
-  <section
-    class="relative min-h-[80vh] flex items-center justify-center text-white text-center"
-    style={heroImageUrl ? `background-image: url('${heroImageUrl}'); background-size: cover; background-position: center;` : 'background-color: #171D1D;'}
-  >
-    <div class="absolute inset-0 bg-black/50"></div>
-    <div class="relative z-10 max-w-3xl mx-auto px-4">
-      <h1 class="text-4xl md:text-5xl font-bold font-['Lato',sans-serif] mb-6 leading-tight">
-        {page.heroHeading}
-      </h1>
-      {page.heroSubheading && (
-        <p class="text-lg md:text-xl mb-8 text-white/80">{page.heroSubheading}</p>
-      )}
-      {page.heroCtaText && (
-        <a
-          href={page.heroCtaUrl || '/book'}
-          class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg"
-        >
-          {page.heroCtaText}
-        </a>
-      )}
-    </div>
-  </section>
+  {page && (
+    <section
+      class="relative min-h-[80vh] flex items-center justify-center text-white text-center"
+      style={heroImageUrl ? `background-image: url('${heroImageUrl}'); background-size: cover; background-position: center;` : 'background-color: #171D1D;'}
+    >
+      <div class="absolute inset-0 bg-black/50"></div>
+      <div class="relative z-10 max-w-3xl mx-auto px-4">
+        <h1 class="text-4xl md:text-5xl font-bold font-['Lato',sans-serif] mb-6 leading-tight">
+          {page.heroHeading}
+        </h1>
+        {page.heroSubheading && (
+          <p class="text-lg md:text-xl mb-8 text-white/80">{page.heroSubheading}</p>
+        )}
+        {page.heroCtaText && (
+          <a
+            href={page.heroCtaUrl || '/book'}
+            class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg"
+          >
+            {page.heroCtaText}
+          </a>
+        )}
+      </div>
+    </section>
+  )}
 
   <!-- Dynamic sections -->
   {sections.map(section => <SectionRenderer section={section} />)}

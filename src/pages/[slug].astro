@@ -12,14 +12,14 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const page = await getPageBySlug(slug);
-const sections = await getSectionsByPage(page.id);
-const heroImageUrl = fileUrl(page.heroImage);
+const sections = page ? await getSectionsByPage(page.id) : [];
+const heroImageUrl = page ? fileUrl(page.heroImage) : null;
 ---
 
 <Layout
-  title={page.seoTitle || page.title}
-  description={page.seoDescription}
-  ogImage={fileUrl(page.seoImage)}
+  title={page?.seoTitle || page?.title}
+  description={page?.seoDescription}
+  ogImage={page ? fileUrl(page.seoImage) : null}
 >
 
   <!-- Hero -->
