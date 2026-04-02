@@ -12,13 +12,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
 
 <Layout title="Book" description="Reserve your PetTrakr device">
   <div id="form-root" class="min-h-screen bg-[#171D1D] py-12 px-4">
-    <div class="max-w-2xl mx-auto">
-
-      <!-- Company branding (populated by JS) -->
-      <div id="company-header" class="hidden text-center mb-8">
-        <img id="company-logo" src="" alt="" class="h-16 w-auto object-contain mx-auto mb-3" />
-        <p id="company-name" class="text-white/60 text-sm"></p>
-      </div>
+    <div class="max-w-3xl mx-auto">
 
       <!-- Invalid token -->
       <div id="invalid-token" class="hidden text-center py-16">
@@ -28,8 +22,15 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
 
       <!-- Form -->
       <div id="form-container" class="hidden">
-        <h1 class="text-3xl font-bold font-['Lato',sans-serif] text-white text-center mb-2">Reserve Your PetTrakr</h1>
-        <p class="text-white/60 text-center mb-8">Please provide your details and we'll be in touch to confirm your booking.</p>
+
+        <!-- Header: logo + title side by side -->
+        <div class="flex items-center gap-6 mb-8">
+          <img id="company-logo" src="" alt="" class="hidden h-24 w-auto object-contain flex-shrink-0" />
+          <div>
+            <h1 class="text-3xl font-bold font-['Lato',sans-serif] text-white">Reserve a Trip</h1>
+            <p class="text-white/60 mt-1">Please provide your details and we'll be in touch to confirm your booking.</p>
+          </div>
+        </div>
 
         <form id="booking-form" class="space-y-8">
           <input type="hidden" id="company-id" name="companyId" value="" />
@@ -269,13 +270,12 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
       // Set hidden company ID
       document.getElementById('company-id').value = company.id;
 
-      // Show company branding
+      // Show company logo
       if (company.logo) {
         const logoEl = document.getElementById('company-logo');
         logoEl.src = `${DIRECTUS_URL}/assets/${company.logo}`;
         logoEl.alt = company.name;
-        document.getElementById('company-name').textContent = `Booking form powered by PetTrakr — presented by ${company.name}`;
-        document.getElementById('company-header').classList.remove('hidden');
+        logoEl.classList.remove('hidden');
       }
 
       document.getElementById('form-container').classList.remove('hidden');
