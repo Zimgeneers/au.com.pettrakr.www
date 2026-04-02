@@ -92,17 +92,27 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
           <!-- Services -->
           <fieldset>
             <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Services Required <span class="text-[#E14D43]">*</span></legend>
-            <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex flex-col gap-4">
               <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="serviceDevice" value="device"
+                <input type="checkbox" id="serviceDevice" name="serviceDevice" value="device"
                   class="w-4 h-4 accent-[#E14D43]" />
-                <span class="text-white">PetTrakr Device</span>
+                <span class="text-white">Add a PetTrakr Device</span>
               </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="serviceTag" value="tag"
-                  class="w-4 h-4 accent-[#E14D43]" />
-                <span class="text-white">TrakrTag</span>
-              </label>
+              <div>
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" id="serviceTag" name="serviceTag" value="tag"
+                    class="w-4 h-4 accent-[#E14D43]" />
+                  <span class="text-white">Add a TrakrTag</span>
+                </label>
+                <div id="tag-select-container" class="hidden mt-3 ml-7">
+                  <label class="block text-white/80 text-sm mb-1" for="tagId">Select Tag</label>
+                  <select id="tagId" name="tagId"
+                    class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-[#ffc803]">
+                    <option value="" class="bg-[#171D1D]">— select a tag —</option>
+                  </select>
+                  <p class="text-white/30 text-xs mt-1">Only available tags assigned to your company are shown. If none are listed, leave blank and email us the tag details.</p>
+                </div>
+              </div>
             </div>
           </fieldset>
 
@@ -279,12 +289,34 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
       }
 
       document.getElementById('form-container').classList.remove('hidden');
+
+      // Load available tags for this company
+      const tagsRes = await fetch(
+        `${DIRECTUS_URL}/items/tags?filter[petTravelCompany][_eq]=${company.id}&filter[status][_eq]=available&fields=id,tagId,tagType&sort=tagId`
+      );
+      const tagsJson = await tagsRes.json();
+      const tags = tagsJson.data ?? [];
+      const tagSelect = document.getElementById('tagId');
+      tags.forEach(tag => {
+        const opt = document.createElement('option');
+        opt.value = tag.id;
+        opt.textContent = tag.tagType ? `${tag.tagId} (${tag.tagType})` : tag.tagId;
+        opt.className = 'bg-[#171D1D]';
+        tagSelect.appendChild(opt);
+      });
+
     } catch (e) {
       document.getElementById('invalid-token').classList.remove('hidden');
     }
   }
 
   loadCompany();
+
+  // ── Tag select toggle ────────────────────────────────────────
+  document.getElementById('serviceTag').addEventListener('change', function() {
+    const container = document.getElementById('tag-select-container');
+    container.classList.toggle('hidden', !this.checked);
+  });
 
   // ── Form submission ──────────────────────────────────────────
   document.getElementById('booking-form').addEventListener('submit', async (e) => {
@@ -331,6 +363,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         form.serviceDevice.checked ? 'device' : null,
         form.serviceTag.checked ? 'tag' : null,
       ].filter(Boolean),
+      tagId: form.serviceTag.checked && form.tagId.value ? form.tagId.value : null,
       notes: form.notes.value,
       flights,
     };
