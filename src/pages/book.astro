@@ -1,0 +1,305 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL ?? 'https://admin.pettrakr.io';
+
+// Fetch airports for dropdowns
+const airportsRes = await fetch(`${DIRECTUS_URL}/items/airports?fields=id,iataCode,name,city,country&sort=name&limit=500`);
+const airportsJson = await airportsRes.json();
+const airports = (airportsJson.data as { id: number; iataCode: string; name: string; city: string; country: string }[])
+  .filter(a => a.iataCode);
+---
+
+<Layout title="Book" description="Reserve your PetTrakr device">
+  <div id="form-root" class="min-h-screen bg-[#171D1D] py-12 px-4">
+    <div class="max-w-2xl mx-auto">
+
+      <!-- Company branding (populated by JS) -->
+      <div id="company-header" class="hidden text-center mb-8">
+        <img id="company-logo" src="" alt="" class="h-16 w-auto object-contain mx-auto mb-3" />
+        <p id="company-name" class="text-white/60 text-sm"></p>
+      </div>
+
+      <!-- Invalid token -->
+      <div id="invalid-token" class="hidden text-center py-16">
+        <p class="text-white text-xl font-bold mb-2">Invalid booking link</p>
+        <p class="text-white/60">Please contact your pet travel company for a valid booking link.</p>
+      </div>
+
+      <!-- Form -->
+      <div id="form-container" class="hidden">
+        <h1 class="text-3xl font-bold font-['Lato',sans-serif] text-white text-center mb-2">Reserve Your PetTrakr</h1>
+        <p class="text-white/60 text-center mb-8">Please provide your details and we'll be in touch to confirm your booking.</p>
+
+        <form id="booking-form" class="space-y-8">
+          <input type="hidden" id="company-id" name="companyId" value="" />
+
+          <!-- Pet Owner -->
+          <fieldset>
+            <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Your Details</legend>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="firstName">First Name <span class="text-[#E14D43]">*</span></label>
+                <input type="text" id="firstName" name="firstName" required
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="lastName">Last Name <span class="text-[#E14D43]">*</span></label>
+                <input type="text" id="lastName" name="lastName" required
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="email">Email <span class="text-[#E14D43]">*</span></label>
+                <input type="email" id="email" name="email" required
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="phone">Phone <span class="text-[#E14D43]">*</span></label>
+                <input type="tel" id="phone" name="phone" required placeholder="+61 400 000 000"
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Pet -->
+          <fieldset>
+            <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Pet Details</legend>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="petName">Pet Name <span class="text-[#E14D43]">*</span></label>
+                <input type="text" id="petName" name="petName" required
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="petSpecies">Species <span class="text-[#E14D43]">*</span></label>
+                <select id="petSpecies" name="petSpecies" required
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-[#ffc803]">
+                  <option value="" disabled selected class="bg-[#171D1D]">Select species</option>
+                  <option value="dog" class="bg-[#171D1D]">Dog</option>
+                  <option value="cat" class="bg-[#171D1D]">Cat</option>
+                  <option value="other" class="bg-[#171D1D]">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="petBreed">Breed</label>
+                <input type="text" id="petBreed" name="petBreed"
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
+              <div>
+                <label class="block text-white/80 text-sm mb-1" for="petWeight">Weight (kg)</label>
+                <input type="number" id="petWeight" name="petWeight" min="0" step="0.1"
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Flights -->
+          <fieldset>
+            <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Flight Details</legend>
+            <div id="flights-list" class="space-y-6"></div>
+            <button type="button" id="add-flight"
+              class="mt-4 text-sm text-[#ffc803] hover:text-white border border-[#ffc803]/40 hover:border-[#ffc803] rounded px-4 py-2 transition-colors">
+              + Add Flight
+            </button>
+          </fieldset>
+
+          <!-- Notes -->
+          <fieldset>
+            <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Additional Information</legend>
+            <textarea id="notes" name="notes" rows="3" placeholder="Any special requirements or information..."
+              class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]"></textarea>
+          </fieldset>
+
+          <!-- Error message -->
+          <p id="form-error" class="hidden text-[#E14D43] text-sm text-center"></p>
+
+          <!-- Submit -->
+          <div class="text-center">
+            <button type="submit" id="submit-btn"
+              class="bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-10 py-3 rounded transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+              Submit Reservation Request
+            </button>
+          </div>
+        </form>
+
+        <!-- Success -->
+        <div id="success-message" class="hidden text-center py-12">
+          <div class="text-5xl mb-4">✓</div>
+          <h2 class="text-2xl font-bold text-white mb-2">Reservation Received</h2>
+          <p class="text-white/60">Thank you! We'll be in touch within 2 business days to confirm your booking.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ airports, DIRECTUS_URL }}>
+  // ── Airport options HTML ─────────────────────────────────────
+  const airportOptions = airports.map(a =>
+    `<option value="${a.iataCode}" class="bg-[#171D1D]">${a.iataCode} — ${a.name}, ${a.city}</option>`
+  ).join('');
+
+  const airportSelect = (name, label) => `
+    <div>
+      <label class="block text-white/80 text-sm mb-1">${label} <span class="text-red-400">*</span></label>
+      <select name="${name}" required
+        class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-yellow-400">
+        <option value="" disabled selected class="bg-[#171D1D]">Select airport</option>
+        ${airportOptions}
+      </select>
+    </div>`;
+
+  // ── Flight template ──────────────────────────────────────────
+  let flightCount = 0;
+
+  function addFlight() {
+    flightCount++;
+    const idx = flightCount;
+    const div = document.createElement('div');
+    div.className = 'bg-white/5 border border-white/10 rounded-lg p-4 relative';
+    div.dataset.flight = idx;
+    div.innerHTML = `
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-white/60 text-sm font-bold">Flight ${idx}</span>
+        ${idx > 1 ? `<button type="button" onclick="removeFlight(${idx})" class="text-white/30 hover:text-red-400 text-sm transition-colors">Remove</button>` : ''}
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-white/80 text-sm mb-1">Flight Number <span class="text-red-400">*</span></label>
+          <input type="text" name="flightNumber_${idx}" required placeholder="EK407"
+            pattern="[A-Z]{2}[0-9]{1,4}"
+            title="Two uppercase letters followed by 1-4 digits (e.g. EK407)"
+            class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-yellow-400 uppercase"
+            oninput="this.value = this.value.toUpperCase()" />
+          <p class="text-white/30 text-xs mt-1">e.g. EK407, NZ1</p>
+        </div>
+        <div>
+          <label class="block text-white/80 text-sm mb-1">Flight Date <span class="text-red-400">*</span></label>
+          <input type="date" name="flightDate_${idx}" required
+            min="${new Date().toISOString().split('T')[0]}"
+            class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-yellow-400" />
+        </div>
+        ${airportSelect(`depAirport_${idx}`, 'Departure Airport')}
+        ${airportSelect(`arrAirport_${idx}`, 'Arrival Airport')}
+      </div>`;
+    document.getElementById('flights-list').appendChild(div);
+  }
+
+  window.removeFlight = (idx) => {
+    document.querySelector(`[data-flight="${idx}"]`)?.remove();
+  };
+
+  document.getElementById('add-flight').addEventListener('click', addFlight);
+
+  // Add first flight on load
+  addFlight();
+
+  // ── Token lookup ─────────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
+  async function loadCompany() {
+    if (!token) {
+      document.getElementById('invalid-token').classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${DIRECTUS_URL}/items/pet_travel_companies?filter[bookingToken][_eq]=${token}&fields=id,name,logo&limit=1`
+      );
+      const json = await res.json();
+      const company = json.data?.[0];
+
+      if (!company) {
+        document.getElementById('invalid-token').classList.remove('hidden');
+        return;
+      }
+
+      // Set hidden company ID
+      document.getElementById('company-id').value = company.id;
+
+      // Show company branding
+      if (company.logo) {
+        const logoEl = document.getElementById('company-logo');
+        logoEl.src = `${DIRECTUS_URL}/assets/${company.logo}`;
+        logoEl.alt = company.name;
+        document.getElementById('company-name').textContent = `Booking form powered by PetTrakr — presented by ${company.name}`;
+        document.getElementById('company-header').classList.remove('hidden');
+      }
+
+      document.getElementById('form-container').classList.remove('hidden');
+    } catch (e) {
+      document.getElementById('invalid-token').classList.remove('hidden');
+    }
+  }
+
+  loadCompany();
+
+  // ── Form submission ──────────────────────────────────────────
+  document.getElementById('booking-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const errorEl = document.getElementById('form-error');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+    errorEl.classList.add('hidden');
+
+    // Collect flights
+    const flights = [];
+    document.querySelectorAll('[data-flight]').forEach(el => {
+      const idx = el.dataset.flight;
+      const flightNumber = el.querySelector(`[name="flightNumber_${idx}"]`).value;
+      const flightDate = el.querySelector(`[name="flightDate_${idx}"]`).value;
+      const depAirport = el.querySelector(`[name="depAirport_${idx}"]`).value;
+      const arrAirport = el.querySelector(`[name="arrAirport_${idx}"]`).value;
+
+      // Format date as DDMMM e.g. 29OCT
+      const d = new Date(flightDate);
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const formatted = `${String(d.getUTCDate()).padStart(2,'0')}${months[d.getUTCMonth()]}`;
+
+      flights.push({
+        flightIdentifier: `${flightNumber}/${formatted}`,
+        flightNumber,
+        flightDate,
+        departureAirport: depAirport,
+        arrivalAirport: arrAirport,
+      });
+    });
+
+    const form = e.target;
+    const payload = {
+      companyId: document.getElementById('company-id').value,
+      firstName: form.firstName.value,
+      lastName: form.lastName.value,
+      email: form.email.value,
+      phone: form.phone.value,
+      petName: form.petName.value,
+      petSpecies: form.petSpecies.value,
+      petBreed: form.petBreed.value,
+      petWeight: form.petWeight.value ? parseFloat(form.petWeight.value) : null,
+      notes: form.notes.value,
+      flights,
+    };
+
+    try {
+      const res = await fetch(`${DIRECTUS_URL}/flows/trigger/booking-form`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      document.getElementById('booking-form').classList.add('hidden');
+      document.getElementById('success-message').classList.remove('hidden');
+    } catch (err) {
+      errorEl.textContent = 'Something went wrong. Please try again or contact us directly.';
+      errorEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Submit Reservation Request';
+    }
+  });
+</script>
