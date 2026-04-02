@@ -135,19 +135,14 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
 </Layout>
 
 <script define:vars={{ airports, DIRECTUS_URL }}>
-  // ── Airport options HTML ─────────────────────────────────────
-  const airportOptions = airports.map(a =>
-    `<option value="${a.iataCode}" class="bg-[#171D1D]">${a.iataCode} — ${a.name}, ${a.city}</option>`
-  ).join('');
-
+  // ── Airport combobox ─────────────────────────────────────────
   const airportSelect = (name, label) => `
-    <div>
+    <div class="relative airport-combobox" data-name="${name}">
       <label class="block text-white/80 text-sm mb-1">${label} <span class="text-red-400">*</span></label>
-      <select name="${name}" required
-        class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-yellow-400">
-        <option value="" disabled selected class="bg-[#171D1D]">Select airport</option>
-        ${airportOptions}
-      </select>
+      <input type="text" autocomplete="off" placeholder="Type to search..."
+        class="combobox-input w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-yellow-400" />
+      <input type="hidden" name="${name}" class="combobox-value" required />
+      <ul class="combobox-list hidden absolute z-50 w-full mt-1 bg-[#1e2424] border border-white/20 rounded max-h-48 overflow-y-auto shadow-xl"></ul>
     </div>`;
 
   // ── Flight template ──────────────────────────────────────────
@@ -190,10 +185,62 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     document.querySelector(`[data-flight="${idx}"]`)?.remove();
   };
 
-  document.getElementById('add-flight').addEventListener('click', addFlight);
+  // ── Combobox logic ───────────────────────────────────────────
+  function initComboboxes(container) {
+    container.querySelectorAll('.airport-combobox').forEach(box => {
+      const input = box.querySelector('.combobox-input');
+      const hidden = box.querySelector('.combobox-value');
+      const list = box.querySelector('.combobox-list');
+
+      input.addEventListener('input', () => {
+        const q = input.value.toLowerCase();
+        hidden.value = '';
+        if (!q) { list.classList.add('hidden'); return; }
+
+        const matches = airports.filter(a =>
+          a.iataCode.toLowerCase().includes(q) ||
+          a.name.toLowerCase().includes(q) ||
+          a.city.toLowerCase().includes(q)
+        ).slice(0, 20);
+
+        list.innerHTML = matches.length
+          ? matches.map(a =>
+              `<li data-code="${a.iataCode}" class="px-3 py-2 text-sm text-white cursor-pointer hover:bg-white/10">
+                <span class="font-bold">${a.iataCode}</span> — ${a.name}, ${a.city}
+              </li>`).join('')
+          : `<li class="px-3 py-2 text-sm text-white/40">No airports found</li>`;
+
+        list.classList.remove('hidden');
+      });
+
+      list.addEventListener('click', e => {
+        const li = e.target.closest('li[data-code]');
+        if (!li) return;
+        const code = li.dataset.code;
+        const airport = airports.find(a => a.iataCode === code);
+        input.value = `${airport.iataCode} — ${airport.name}, ${airport.city}`;
+        hidden.value = code;
+        list.classList.add('hidden');
+      });
+
+      document.addEventListener('click', e => {
+        if (!box.contains(e.target)) list.classList.add('hidden');
+      });
+    });
+  }
+
+  function addFlight_withCombobox() {
+    addFlight();
+    const flightEl = document.querySelector(`[data-flight="${flightCount}"]`);
+    if (flightEl) initComboboxes(flightEl);
+  }
+
+  document.getElementById('add-flight').addEventListener('click', addFlight_withCombobox);
 
   // Add first flight on load
   addFlight();
+  const firstFlight = document.querySelector('[data-flight="1"]');
+  if (firstFlight) initComboboxes(firstFlight);
 
   // ── Token lookup ─────────────────────────────────────────────
   const params = new URLSearchParams(window.location.search);
