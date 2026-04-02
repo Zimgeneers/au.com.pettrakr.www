@@ -84,7 +84,7 @@ const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL ?? 'https://admin.pettr
     };
 
     try {
-      const res = await fetch(`${DIRECTUS_URL}/flows/trigger/contact-form`, {
+      const res = await fetch(`${DIRECTUS_URL}/flows/trigger/66f4b686-ce73-4523-8886-15e89e12212e`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
