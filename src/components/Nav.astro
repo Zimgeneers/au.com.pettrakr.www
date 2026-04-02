@@ -19,14 +19,19 @@ const topLevel = navItems.filter(n => !n.parent);
 
     <!-- Desktop nav -->
     <nav class="hidden lg:flex items-center gap-6">
-      {topLevel.map(item => (
-        <a
-          href={item.url}
-          class="text-white text-sm font-bold hover:text-[#ffc803] transition-colors"
-        >
-          {item.label}
-        </a>
-      ))}
+      {topLevel.map(item => {
+        const href = item.page?.slug ? `/${item.page.slug}` : (item.url ?? '#');
+        return (
+          <a
+            href={href}
+            target={item.openInNewTab ? '_blank' : undefined}
+            rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
+            class="text-white text-sm font-bold hover:text-[#ffc803] transition-colors"
+          >
+            {item.label}
+          </a>
+        );
+      })}
       <a
         href="/book"
         class="bg-[#E14D43] hover:bg-[#494578] text-white text-sm font-bold px-5 py-2 rounded transition-colors"
@@ -50,14 +55,19 @@ const topLevel = navItems.filter(n => !n.parent);
   <!-- Mobile menu -->
   <div id="mobile-menu" class="hidden lg:hidden bg-[#171D1D] border-t border-white/10">
     <nav class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
-      {topLevel.map(item => (
-        <a
-          href={item.url}
-          class="text-white text-sm font-bold hover:text-[#ffc803] transition-colors py-1"
-        >
-          {item.label}
-        </a>
-      ))}
+      {topLevel.map(item => {
+        const href = item.page?.slug ? `/${item.page.slug}` : (item.url ?? '#');
+        return (
+          <a
+            href={href}
+            target={item.openInNewTab ? '_blank' : undefined}
+            rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
+            class="text-white text-sm font-bold hover:text-[#ffc803] transition-colors py-1"
+          >
+            {item.label}
+          </a>
+        );
+      })}
       <a
         href="/book"
         class="bg-[#E14D43] hover:bg-[#494578] text-white text-sm font-bold px-5 py-2 rounded transition-colors text-center mt-2"

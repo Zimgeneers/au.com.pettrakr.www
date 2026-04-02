@@ -23,9 +23,11 @@ export interface SiteSettings {
 export interface NavItem {
   id: number;
   label: string;
-  url: string;
+  url: string | null;
   sort: number;
   parent: number | null;
+  openInNewTab: boolean | null;
+  page: { slug: string } | null;
 }
 
 export interface Page {
@@ -77,7 +79,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
 }
 
 export async function getNavigation(): Promise<NavItem[]> {
-  return fetchDirectus<NavItem[]>('/items/navigation?sort=sort&fields=*');
+  return fetchDirectus<NavItem[]>('/items/navigation?sort=sort&fields=*,page.slug');
 }
 
 export async function getPageBySlug(slug: string): Promise<Page> {
