@@ -1,0 +1,35 @@
+---
+import type { Section } from '../../lib/directus';
+import { getSectionStyle } from './sectionHelpers';
+
+interface Props { section: Section }
+const { section } = Astro.props;
+const { bgClass, bgStyle, isDark, headingClass } = getSectionStyle(section);
+
+const items = (section.items ?? []).filter(i => i.type === 'faq');
+---
+
+<section class={`py-16 px-4 ${bgClass}`} style={bgStyle}>
+  {isDark && bgStyle.includes('background-image') && <div class="absolute inset-0 bg-black/50" />}
+  <div class="relative max-w-3xl mx-auto">
+    {section.heading && <h2 class={`${headingClass} text-center`}>{section.heading}</h2>}
+    {section.body && <p class="text-center text-white/60 mb-10">{section.body}</p>}
+    {items.length > 0 && (
+      <div class="divide-y divide-white/10">
+        {items.map((item, i) => (
+          <details class="group py-4">
+            <summary class="flex justify-between items-center cursor-pointer list-none gap-4">
+              <span class={`font-semibold text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {item.heading}
+              </span>
+              <span class="text-[#ffc803] flex-shrink-0 transition-transform group-open:rotate-45 text-xl leading-none">+</span>
+            </summary>
+            <div class={`mt-3 text-sm leading-relaxed ${isDark ? 'text-white/70' : 'text-gray-600'}`}>
+              {item.body}
+            </div>
+          </details>
+        ))}
+      </div>
+    )}
+  </div>
+</section>

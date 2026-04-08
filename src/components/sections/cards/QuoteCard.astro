@@ -1,0 +1,22 @@
+---
+import type { SectionItem } from '../../../lib/directus';
+import { fileUrl } from '../../../lib/directus';
+
+interface Props { item: SectionItem }
+const { item } = Astro.props;
+const avatarUrl = fileUrl(item.image);
+---
+
+<div class="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col gap-4">
+  <p class="text-white/80 text-base leading-relaxed flex-1">
+    <span class="text-[#ffc803] text-2xl font-serif leading-none mr-1">"</span>{item.quote ?? item.body}<span class="text-[#ffc803] text-2xl font-serif leading-none ml-1">"</span>
+  </p>
+  <div class="flex items-center gap-3 pt-2 border-t border-white/10">
+    {avatarUrl && (
+      <img src={avatarUrl} alt={item.author ?? ''} class="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+    )}
+    <div>
+      {item.author && <p class="text-white font-bold text-sm">{item.author}</p>}
+    </div>
+  </div>
+</div>

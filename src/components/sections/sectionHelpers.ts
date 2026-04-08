@@ -13,11 +13,12 @@ export function getSectionStyle(section: Section): SectionStyle {
   const bg = section.background ?? 'white';
   const bgImgUrl = fileUrl(section.backgroundImage);
   const hasBgImg = !!bgImgUrl;
-  const isDark = bg === 'black' || bg === 'pettrakr' || hasBgImg;
+  const isDark = bg === 'black' || bg === 'dark' || bg === 'pettrakr' || hasBgImg;
 
   const bgClass = hasBgImg
     ? 'relative text-white'
     : bg === 'black' ? 'bg-black text-white'
+    : bg === 'dark' ? 'bg-[#171D1D] text-white'
     : bg === 'pettrakr' ? 'text-white'
     : bg === 'gray' ? 'bg-gray-100'
     : 'bg-white';

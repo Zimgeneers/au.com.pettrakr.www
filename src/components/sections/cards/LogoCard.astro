@@ -1,0 +1,23 @@
+---
+import type { SectionItem } from '../../../lib/directus';
+import { fileUrl } from '../../../lib/directus';
+
+interface Props { item: SectionItem }
+const { item } = Astro.props;
+const imgUrl = fileUrl(item.image);
+---
+
+{imgUrl ? (
+  item.link ? (
+    <a href={item.link} target="_blank" rel="noopener noreferrer" title={item.heading ?? ''}
+      class="bg-white rounded-xl p-4 hover:opacity-90 transition-opacity aspect-square flex items-center justify-center">
+      <img src={imgUrl} alt={item.heading ?? ''} class="w-full h-full object-contain" />
+    </a>
+  ) : (
+    <div class="bg-white rounded-xl p-4 aspect-square flex items-center justify-center">
+      <img src={imgUrl} alt={item.heading ?? ''} class="w-full h-full object-contain" />
+    </div>
+  )
+) : (
+  <span class="text-white/60 font-bold text-sm">{item.heading}</span>
+)}

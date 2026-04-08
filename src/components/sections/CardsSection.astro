@@ -1,0 +1,37 @@
+---
+import type { Section } from '../../lib/directus';
+import { getSectionStyle } from './sectionHelpers';
+import Card from './cards/Card.astro';
+import QuoteCard from './cards/QuoteCard.astro';
+import FeatureCard from './cards/FeatureCard.astro';
+import LogoCard from './cards/LogoCard.astro';
+
+interface Props { section: Section }
+const { section } = Astro.props;
+const { bgClass, bgStyle, isDark, headingClass } = getSectionStyle(section);
+
+const cols = section.columns ?? 3;
+const gridClass = cols === 2 ? 'grid-cols-1 sm:grid-cols-2'
+  : cols === 4 ? 'grid-cols-2 md:grid-cols-4'
+  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+
+const items = section.items ?? [];
+---
+
+<section class={`py-16 px-4 ${bgClass}`} style={bgStyle}>
+  {isDark && bgStyle.includes('background-image') && <div class="absolute inset-0 bg-black/50" />}
+  <div class="relative max-w-6xl mx-auto">
+    {section.heading && <h2 class={`${headingClass} text-center`}>{section.heading}</h2>}
+    {section.body && <p class="text-center text-white/60 mb-10 max-w-2xl mx-auto">{section.body}</p>}
+    {items.length > 0 && (
+      <div class={`grid ${gridClass} gap-6`}>
+        {items.map(item => (
+          item.type === 'quote'   ? <QuoteCard item={item} /> :
+          item.type === 'feature' ? <FeatureCard item={item} /> :
+          item.type === 'logo'    ? <LogoCard item={item} /> :
+                                    <Card item={item} />
+        ))}
+      </div>
+    )}
+  </div>
+</section>

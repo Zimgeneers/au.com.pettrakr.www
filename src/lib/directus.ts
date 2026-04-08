@@ -57,14 +57,29 @@ export interface Section {
   type: string;
   sort: number;
   heading: string;
+  subheading: string | null;
   body: string;
   ctaText: string;
   ctaUrl: string;
   image: string | null;
-  imagePosition: string;
-  background: 'white' | 'light' | 'dark' | null;
+  imagePosition: 'left' | 'right' | null;
+  background: 'white' | 'gray' | 'dark' | 'black' | 'pettrakr' | null;
   backgroundImage: string | null;
   parallax: boolean | null;
+  columns: 2 | 3 | 4 | null;
+  items: SectionItem[];
+}
+
+export interface SectionItem {
+  id: number;
+  type: 'card' | 'quote' | 'feature' | 'logo' | 'faq';
+  heading: string | null;
+  body: string | null;
+  image: string | null;
+  quote: string | null;
+  author: string | null;
+  link: string | null;
+  sort: number;
 }
 
 export interface Airline {
@@ -110,7 +125,8 @@ export async function getPageBySlug(slug: string): Promise<Page | null> {
 }
 
 export async function getSectionsByPage(pageId: number): Promise<Section[]> {
-  const params = new URLSearchParams({ 'filter[page][_eq]': String(pageId), 'sort': 'sort', 'fields': '*' });
+  const fields = 'id,type,sort,heading,subheading,body,ctaText,ctaUrl,image,imagePosition,background,backgroundImage,parallax,columns,items.id,items.type,items.sort,items.heading,items.body,items.image,items.quote,items.author,items.link';
+  const params = new URLSearchParams({ 'filter[page][_eq]': String(pageId), 'sort': 'sort', 'fields': fields });
   return fetchDirectus<Section[]>(`/items/sections?${params}`, []);
 }
 
