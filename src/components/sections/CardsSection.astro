@@ -22,7 +22,7 @@ const items = section.items ?? [];
   {isDark && bgStyle.includes('background-image') && <div class="absolute inset-0 bg-black/50" />}
   <div class="relative max-w-6xl mx-auto">
     {section.heading && <h2 class={`${headingClass} text-center`}>{section.heading}</h2>}
-    {section.body && <p class="text-center opacity-60 mb-10 max-w-2xl mx-auto">{section.body}</p>}
+    {section.body && <div class="text-center opacity-60 mb-10 max-w-2xl mx-auto" set:html={section.body} />}
     {items.length > 0 && (
       <div class={`grid ${gridClass} gap-6`}>
         {items.map(item => (
