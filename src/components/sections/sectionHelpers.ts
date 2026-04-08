@@ -20,8 +20,8 @@ export function getSectionStyle(section: Section): SectionStyle {
     : bg === 'black' ? 'bg-black text-white'
     : bg === 'dark' ? 'bg-[#171D1D] text-white'
     : bg === 'pettrakr' ? 'text-white'
-    : bg === 'gray' ? 'bg-gray-100'
-    : 'bg-white';
+    : bg === 'gray' ? 'bg-gray-100 text-gray-900'
+    : 'bg-white text-gray-900';
 
   const bgStyle = hasBgImg
     ? `background-image: url('${bgImgUrl}'); background-size: cover; background-position: center; ${section.parallax ? 'background-attachment: fixed;' : ''}`

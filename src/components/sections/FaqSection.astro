@@ -13,9 +13,9 @@ const items = (section.items ?? []).filter(i => i.type === 'faq');
   {isDark && bgStyle.includes('background-image') && <div class="absolute inset-0 bg-black/50" />}
   <div class="relative max-w-3xl mx-auto">
     {section.heading && <h2 class={`${headingClass} text-center`}>{section.heading}</h2>}
-    {section.body && <p class="text-center text-white/60 mb-10">{section.body}</p>}
+    {section.body && <p class={`text-center opacity-60 mb-10 ${isDark ? 'text-white' : 'text-current'}`}>{section.body}</p>}
     {items.length > 0 && (
-      <div class="divide-y divide-white/10">
+      <div class={`divide-y ${isDark ? 'divide-white/10' : 'divide-black/10'}`}>
         {items.map((item, i) => (
           <details class="group py-4">
             <summary class="flex justify-between items-center cursor-pointer list-none gap-4">

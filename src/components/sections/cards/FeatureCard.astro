@@ -2,17 +2,18 @@
 import type { SectionItem } from '../../../lib/directus';
 import { fileUrl } from '../../../lib/directus';
 
-interface Props { item: SectionItem }
-const { item } = Astro.props;
+interface Props { item: SectionItem; isDark?: boolean }
+const { item, isDark = false } = Astro.props;
 const imgUrl = fileUrl(item.image);
+const cardBg = isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10';
 ---
 
-<div class="bg-white/5 border border-white/10 rounded-xl p-6">
+<div class={`border rounded-xl p-6 ${cardBg}`}>
   {imgUrl && (
     <img src={imgUrl} alt={item.heading ?? ''} class="w-12 h-12 object-contain mb-4" />
   )}
-  {item.heading && <h3 class="text-white font-bold text-lg mb-2">{item.heading}</h3>}
-  {item.body && <p class="text-white/70 text-sm leading-relaxed">{item.body}</p>}
+  {item.heading && <h3 class="text-current font-bold text-lg mb-2">{item.heading}</h3>}
+  {item.body && <p class="text-current opacity-70 text-sm leading-relaxed">{item.body}</p>}
   {item.link && (
     <a href={item.link} class="mt-4 inline-block text-[#ffc803] text-sm hover:underline">Learn more →</a>
   )}
