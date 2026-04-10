@@ -3,10 +3,10 @@ import Layout from '../layouts/Layout.astro';
 
 const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL ?? 'https://admin.pettrakr.io';
 
-// Fetch airports for dropdowns
-const airportsRes = await fetch(`${DIRECTUS_URL}/items/airports?fields=id,iataCode,name,city,country&sort=name&limit=500`);
+// Fetch airports for dropdowns (timezone used to set flight display timezone)
+const airportsRes = await fetch(`${DIRECTUS_URL}/items/airports?fields=id,iataCode,name,city,country,timezone&sort=name&limit=500`);
 const airportsJson = await airportsRes.json();
-const airports = (airportsJson.data as { id: number; iataCode: string; name: string; city: string; country: string }[])
+const airports = (airportsJson.data as { id: number; iataCode: string; name: string; city: string; country: string; timezone: string }[])
   .filter(a => a.iataCode);
 ---
 
@@ -348,27 +348,53 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     return (await createRes.json()).data?.id;
   }
 
-  async function findOrCreateFlight(flightNumber, flightDate, depAirport, arrAirport) {
+  // Airline cache to avoid re-fetching for the same prefix within a submission
+  const airlineCache = {};
+  async function lookupAirline(flightNumber) {
+    const prefix = flightNumber.match(/^[A-Z]{2}/)?.[0];
+    if (!prefix) return null;
+    if (prefix in airlineCache) return airlineCache[prefix];
+    const res = await fetch(`${DIRECTUS_URL}/items/airlines?filter[iataCode][_eq]=${prefix}&fields=id&limit=1`);
+    const id = (await res.json()).data?.[0]?.id ?? null;
+    airlineCache[prefix] = id;
+    return id;
+  }
+
+  async function findOrCreateFlight(flightNumber, flightDate, depAirportId, arrAirportId) {
+    // Format flight number with date suffix: EK407 + 2026-04-11 → EK407/11APR
+    const d = new Date(flightDate);
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const dateSuffix = `${String(d.getUTCDate()).padStart(2,'0')}${months[d.getUTCMonth()]}`;
+    const qualifiedNumber = `${flightNumber}/${dateSuffix}`;
+
+    // Dedup by qualified flight number + airports
     const params = [
-      `filter[flightNumber][_eq]=${encodeURIComponent(flightNumber)}`,
-      `filter[startDateTime][_between][]=${encodeURIComponent(flightDate + 'T00:00:00')}`,
-      `filter[startDateTime][_between][]=${encodeURIComponent(flightDate + 'T23:59:59')}`,
-      `filter[departureAirport][_eq]=${encodeURIComponent(depAirport)}`,
-      `filter[destinationAirport][_eq]=${encodeURIComponent(arrAirport)}`,
+      `filter[flightNumber][_eq]=${encodeURIComponent(qualifiedNumber)}`,
+      `filter[departureAirport][_eq]=${encodeURIComponent(depAirportId)}`,
+      `filter[destinationAirport][_eq]=${encodeURIComponent(arrAirportId)}`,
       'fields=id',
       'limit=1',
     ].join('&');
     const findRes = await fetch(`${DIRECTUS_URL}/items/flights?${params}`);
     const found = (await findRes.json()).data?.[0];
     if (found) return found.id;
+
+    // Resolve airline and timezone from airports data
+    const depAirport = airports.find(a => a.id === Number(depAirportId));
+    const arrAirport = airports.find(a => a.id === Number(arrAirportId));
+    const airlineId = await lookupAirline(flightNumber);
+
     const createRes = await fetch(`${DIRECTUS_URL}/items/flights`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        flightNumber,
+        flightNumber: qualifiedNumber,
         startDateTime: flightDate + 'T00:00:00',
-        departureAirport: Number(depAirport),
-        destinationAirport: Number(arrAirport),
+        departureAirport: Number(depAirportId),
+        destinationAirport: Number(arrAirportId),
+        ...(depAirport?.timezone ? { startDisplayTimezone: depAirport.timezone } : {}),
+        ...(arrAirport?.timezone ? { endDisplayTimezone: arrAirport.timezone } : {}),
+        ...(airlineId ? { airline: airlineId } : {}),
       }),
     });
     if (!createRes.ok) throw new Error(`Failed to create flight: HTTP ${createRes.status}`);
