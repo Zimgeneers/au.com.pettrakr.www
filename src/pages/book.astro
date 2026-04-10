@@ -451,6 +451,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
       // ── Collect and dedup flights ────────────────────────────
       btn.textContent = 'Processing flights…';
       const flightIds = [];
+      const flightNumbers = [];
       for (const el of document.querySelectorAll('[data-flight]')) {
         const idx = el.dataset.flight;
         const flightNumber = el.querySelector(`[name="flightNumber_${idx}"]`).value;
@@ -459,6 +460,10 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         const arrAirport = el.querySelector(`[name="arrAirport_${idx}"]`).value;
         const flightId = await findOrCreateFlight(flightNumber, flightDate, depAirport, arrAirport);
         flightIds.push(flightId);
+        // Collect the qualified number (EK407/11APR) for the confirmation email
+        const d = new Date(flightDate);
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        flightNumbers.push(`${flightNumber}/${String(d.getUTCDate()).padStart(2,'0')}${months[d.getUTCMonth()]}`);
       }
 
       // ── Submit to flow ───────────────────────────────────────
@@ -481,6 +486,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         tagId: form.serviceTag.checked && form.tagId.value ? Number(form.tagId.value) : null,
         notes: form.notes.value,
         flightIds,
+        flightNumbers,
       };
 
       const res = await fetch(`${DIRECTUS_URL}/flows/trigger/d6d1613b-70d5-49df-a3bd-c97e87579f95`, {
