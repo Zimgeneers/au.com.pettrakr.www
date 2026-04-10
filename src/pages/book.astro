@@ -76,6 +76,11 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
                 <input type="text" id="petBreed" name="petBreed" required
                   class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
               </div>
+              <div class="sm:col-span-2">
+                <label class="block text-white/80 text-sm mb-1" for="companyReference">Your Booking Reference <span class="text-[#E14D43]">*</span></label>
+                <input type="text" id="companyReference" name="companyReference" required placeholder="Your company's booking reference number"
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803]" />
+              </div>
             </div>
           </fieldset>
 
@@ -359,6 +364,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
       phone: form.phone.value,
       petName: form.petName.value,
       petBreed: form.petBreed.value,
+      companyReference: form.companyReference.value,
       servicesRequested: [
         form.serviceDevice.checked ? 'device' : null,
         form.serviceTag.checked ? 'tag' : null,
