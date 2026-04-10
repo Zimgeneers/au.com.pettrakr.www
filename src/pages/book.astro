@@ -89,35 +89,41 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
           <fieldset>
             <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Flight Details</legend>
 
-            <!-- Lookup inputs -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-white/80 text-sm mb-1">Flight Number</label>
-                <input type="text" id="lookup-flight-number" placeholder="EK407"
-                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803] uppercase"
-                  oninput="this.value = this.value.toUpperCase()" />
-                <p class="text-white/30 text-xs mt-1">e.g. EK407, QR901</p>
-              </div>
-              <div>
-                <label class="block text-white/80 text-sm mb-1">Flight Date</label>
-                <input type="date" id="lookup-flight-date"
-                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-[#ffc803]" />
-              </div>
-            </div>
-            <div class="mt-3">
-              <button type="button" id="lookup-btn"
-                class="text-sm text-[#ffc803] hover:text-white border border-[#ffc803]/40 hover:border-[#ffc803] rounded px-4 py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                Look Up Flight
-              </button>
-              <p id="lookup-error" class="hidden text-[#E14D43] text-xs mt-2"></p>
-            </div>
-
-            <!-- Preview area -->
-            <div id="preview-area"></div>
-
             <!-- Confirmed flights list -->
-            <div id="confirmed-flights-list" class="mt-4 space-y-2"></div>
-            <p id="flights-required" class="hidden text-[#E14D43] text-xs mt-2">Please add at least one flight.</p>
+            <div id="confirmed-flights-list" class="space-y-2 mb-4"></div>
+            <p id="flights-required" class="hidden text-[#E14D43] text-xs mb-3">Please add at least one flight.</p>
+
+            <!-- Add a Flight panel -->
+            <div class="bg-white/5 border border-white/10 rounded-lg p-4">
+              <p class="text-white font-bold text-sm mb-4">Add a Flight</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-white/80 text-sm mb-1">Flight Number</label>
+                  <input type="text" id="lookup-flight-number" placeholder="EK407"
+                    class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803] uppercase"
+                    oninput="this.value = this.value.toUpperCase()" />
+                  <p class="text-white/30 text-xs mt-1">e.g. EK407, QR901</p>
+                </div>
+                <div>
+                  <label class="block text-white/80 text-sm mb-1">Flight Date</label>
+                  <input type="date" id="lookup-flight-date"
+                    class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-[#ffc803]" />
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="button" id="lookup-btn"
+                  class="text-sm text-[#ffc803] hover:text-white border border-[#ffc803]/40 hover:border-[#ffc803] rounded px-4 py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  Look Up Flight
+                </button>
+              </div>
+              <p id="lookup-error" class="hidden text-[#E14D43] text-xs mt-2"></p>
+
+              <!-- Preview area -->
+              <div id="preview-area"></div>
+
+              <!-- Flash confirmation -->
+              <div id="flight-added-flash" class="hidden mt-3 text-sm text-emerald-400 font-medium">Flight added — enter another below or continue to the next section.</div>
+            </div>
           </fieldset>
 
           <!-- Services -->
@@ -322,8 +328,16 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     document.getElementById('preview-area').innerHTML = '';
     document.getElementById('lookup-flight-number').value = '';
     document.getElementById('lookup-flight-date').value = '';
+    document.getElementById('lookup-error').classList.add('hidden');
     document.getElementById('flights-required').classList.add('hidden');
     renderConfirmedList();
+
+    // Flash confirmation
+    const flash = document.getElementById('flight-added-flash');
+    flash.classList.remove('hidden');
+    setTimeout(() => flash.classList.add('hidden'), 4000);
+
+    document.getElementById('lookup-flight-number').focus();
   }
 
   // ── Confirmed flights list ───────────────────────────────────
