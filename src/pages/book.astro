@@ -232,7 +232,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         const code = li.dataset.code;
         const airport = airports.find(a => a.iataCode === code);
         input.value = `${airport.iataCode} — ${airport.name}, ${airport.city}`;
-        hidden.value = code;
+        hidden.value = airport.id;
         list.classList.add('hidden');
       });
 
