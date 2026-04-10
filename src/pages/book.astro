@@ -402,6 +402,18 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         { name: petName, type: form.petBreed.value, customer: customerId }
       );
 
+      // ── Check reference uniqueness ───────────────────────────
+      btn.textContent = 'Checking reference…';
+      const companyId = document.getElementById('company-id').value;
+      const reference = form.companyReference.value.trim();
+      const refCheck = await fetch(
+        `${DIRECTUS_URL}/items/trips?filter[reference][_eq]=${encodeURIComponent(reference)}&fields=id&limit=1`
+      );
+      const refExists = (await refCheck.json()).data?.length > 0;
+      if (refExists) {
+        throw new Object({ userMessage: 'This booking reference has already been submitted. Please check your reference number or contact us if you believe this is an error.' });
+      }
+
       // ── Collect and dedup flights ────────────────────────────
       btn.textContent = 'Processing flights…';
       const flightIds = [];
@@ -420,8 +432,8 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
       const payload = {
         petId,
         customerId,
-        companyId: document.getElementById('company-id').value,
-        companyReference: form.companyReference.value,
+        companyId,
+        companyReference: reference,
         email,
         firstName: form.firstName.value,
         lastName: form.lastName.value,
@@ -448,7 +460,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
       document.getElementById('booking-form').classList.add('hidden');
       document.getElementById('success-message').classList.remove('hidden');
     } catch (err) {
-      errorEl.textContent = 'Something went wrong. Please try again or contact us directly.';
+      errorEl.textContent = err?.userMessage ?? 'Something went wrong. Please try again or contact us directly.';
       errorEl.classList.remove('hidden');
       btn.disabled = false;
       btn.textContent = 'Submit Reservation Request';
