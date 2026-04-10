@@ -323,6 +323,50 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     container.classList.toggle('hidden', !this.checked);
   });
 
+  // ── Helpers ──────────────────────────────────────────────────
+  async function findOrCreate(collection, filter, createPayload) {
+    const params = Object.entries(filter)
+      .map(([k, v]) => `filter[${k}][_eq]=${encodeURIComponent(v)}`)
+      .join('&');
+    const findRes = await fetch(`${DIRECTUS_URL}/items/${collection}?${params}&fields=id&limit=1`);
+    const found = (await findRes.json()).data?.[0];
+    if (found) return found.id;
+    const createRes = await fetch(`${DIRECTUS_URL}/items/${collection}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(createPayload),
+    });
+    if (!createRes.ok) throw new Error(`Failed to create ${collection}: HTTP ${createRes.status}`);
+    return (await createRes.json()).data?.id;
+  }
+
+  async function findOrCreateFlight(flightNumber, flightDate, depAirport, arrAirport) {
+    const params = [
+      `filter[flightNumber][_eq]=${encodeURIComponent(flightNumber)}`,
+      `filter[startDateTime][_between][]=${encodeURIComponent(flightDate + 'T00:00:00')}`,
+      `filter[startDateTime][_between][]=${encodeURIComponent(flightDate + 'T23:59:59')}`,
+      `filter[departureAirport][_eq]=${encodeURIComponent(depAirport)}`,
+      `filter[destinationAirport][_eq]=${encodeURIComponent(arrAirport)}`,
+      'fields=id',
+      'limit=1',
+    ].join('&');
+    const findRes = await fetch(`${DIRECTUS_URL}/items/flights?${params}`);
+    const found = (await findRes.json()).data?.[0];
+    if (found) return found.id;
+    const createRes = await fetch(`${DIRECTUS_URL}/items/flights`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        flightNumber,
+        startDateTime: flightDate + 'T00:00:00',
+        departureAirport: Number(depAirport),
+        destinationAirport: Number(arrAirport),
+      }),
+    });
+    if (!createRes.ok) throw new Error(`Failed to create flight: HTTP ${createRes.status}`);
+    return (await createRes.json()).data?.id;
+  }
+
   // ── Form submission ──────────────────────────────────────────
   document.getElementById('booking-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -332,49 +376,67 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     btn.textContent = 'Submitting…';
     errorEl.classList.add('hidden');
 
-    // Collect flights
-    const flights = [];
-    document.querySelectorAll('[data-flight]').forEach(el => {
-      const idx = el.dataset.flight;
-      const flightNumber = el.querySelector(`[name="flightNumber_${idx}"]`).value;
-      const flightDate = el.querySelector(`[name="flightDate_${idx}"]`).value;
-      const depAirport = el.querySelector(`[name="depAirport_${idx}"]`).value;
-      const arrAirport = el.querySelector(`[name="arrAirport_${idx}"]`).value;
-
-      // Format date as DDMMM e.g. 29OCT
-      const d = new Date(flightDate);
-      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-      const formatted = `${String(d.getUTCDate()).padStart(2,'0')}${months[d.getUTCMonth()]}`;
-
-      flights.push({
-        flightIdentifier: `${flightNumber}/${formatted}`,
-        flightNumber,
-        flightDate,
-        departureAirport: depAirport,
-        arrivalAirport: arrAirport,
-      });
-    });
-
     const form = e.target;
-    const payload = {
-      companyId: document.getElementById('company-id').value,
-      firstName: form.firstName.value,
-      lastName: form.lastName.value,
-      email: form.email.value,
-      phone: form.phone.value,
-      petName: form.petName.value,
-      petBreed: form.petBreed.value,
-      companyReference: form.companyReference.value,
-      servicesRequested: [
-        form.serviceDevice.checked ? 'device' : null,
-        form.serviceTag.checked ? 'tag' : null,
-      ].filter(Boolean),
-      tagId: form.serviceTag.checked && form.tagId.value ? form.tagId.value : null,
-      notes: form.notes.value,
-      flights,
-    };
+    const email = form.email.value;
+    const petName = form.petName.value;
 
     try {
+      // ── Find or create customer (dedup by email) ─────────────
+      btn.textContent = 'Looking up customer…';
+      const customerId = await findOrCreate(
+        'customers',
+        { email },
+        {
+          firstName: form.firstName.value,
+          lastName: form.lastName.value,
+          email,
+          phone: form.phone.value,
+        }
+      );
+
+      // ── Find or create pet (dedup by name + customer) ────────
+      btn.textContent = 'Looking up pet…';
+      const petId = await findOrCreate(
+        'pets',
+        { name: petName, customer: customerId },
+        { name: petName, type: form.petBreed.value, customer: customerId }
+      );
+
+      // ── Collect and dedup flights ────────────────────────────
+      btn.textContent = 'Processing flights…';
+      const flightIds = [];
+      for (const el of document.querySelectorAll('[data-flight]')) {
+        const idx = el.dataset.flight;
+        const flightNumber = el.querySelector(`[name="flightNumber_${idx}"]`).value;
+        const flightDate = el.querySelector(`[name="flightDate_${idx}"]`).value;
+        const depAirport = el.querySelector(`[name="depAirport_${idx}"]`).value;
+        const arrAirport = el.querySelector(`[name="arrAirport_${idx}"]`).value;
+        const flightId = await findOrCreateFlight(flightNumber, flightDate, depAirport, arrAirport);
+        flightIds.push(flightId);
+      }
+
+      // ── Submit to flow ───────────────────────────────────────
+      btn.textContent = 'Creating trip…';
+      const payload = {
+        petId,
+        customerId,
+        companyId: document.getElementById('company-id').value,
+        companyReference: form.companyReference.value,
+        email,
+        firstName: form.firstName.value,
+        lastName: form.lastName.value,
+        phone: form.phone.value,
+        petName,
+        petBreed: form.petBreed.value,
+        servicesRequested: [
+          form.serviceDevice.checked ? 'device' : null,
+          form.serviceTag.checked ? 'tag' : null,
+        ].filter(Boolean),
+        tagId: form.serviceTag.checked && form.tagId.value ? Number(form.tagId.value) : null,
+        notes: form.notes.value,
+        flightIds,
+      };
+
       const res = await fetch(`${DIRECTUS_URL}/flows/trigger/d6d1613b-70d5-49df-a3bd-c97e87579f95`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
