@@ -32,6 +32,7 @@ jobs:
         run: npm run build
         env:
           PUBLIC_DIRECTUS_URL: ${{ vars.PUBLIC_DIRECTUS_URL }}
+          PUBLIC_AERODATABOX_KEY: ${{ secrets.AERODATABOX_KEY }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

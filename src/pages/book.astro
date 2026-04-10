@@ -2,11 +2,12 @@
 import Layout from '../layouts/Layout.astro';
 
 const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL ?? 'https://admin.pettrakr.io';
+const AERODATABOX_KEY = import.meta.env.PUBLIC_AERODATABOX_KEY ?? '';
 
-// Fetch airports for dropdowns (timezone used to set flight display timezone)
-const airportsRes = await fetch(`${DIRECTUS_URL}/items/airports?fields=id,iataCode,name,city,country,timezone&sort=name&limit=500`);
+// Fetch airports (IATA → Directus ID + timezone, used to match AeroDataBox response)
+const airportsRes = await fetch(`${DIRECTUS_URL}/items/airports?fields=id,iataCode,name,city,timezone&sort=name&limit=500`);
 const airportsJson = await airportsRes.json();
-const airports = (airportsJson.data as { id: number; iataCode: string; name: string; city: string; country: string; timezone: string }[])
+const airports = (airportsJson.data as { id: number; iataCode: string; name: string; city: string; timezone: string }[])
   .filter(a => a.iataCode);
 ---
 
@@ -87,11 +88,36 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
           <!-- Flights -->
           <fieldset>
             <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Flight Details</legend>
-            <div id="flights-list" class="space-y-6"></div>
-            <button type="button" id="add-flight"
-              class="mt-4 text-sm text-[#ffc803] hover:text-white border border-[#ffc803]/40 hover:border-[#ffc803] rounded px-4 py-2 transition-colors">
-              + Add Flight
-            </button>
+
+            <!-- Lookup inputs -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-white/80 text-sm mb-1">Flight Number</label>
+                <input type="text" id="lookup-flight-number" placeholder="EK407"
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#ffc803] uppercase"
+                  oninput="this.value = this.value.toUpperCase()" />
+                <p class="text-white/30 text-xs mt-1">e.g. EK407, QR901</p>
+              </div>
+              <div>
+                <label class="block text-white/80 text-sm mb-1">Flight Date</label>
+                <input type="date" id="lookup-flight-date"
+                  class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-[#ffc803]" />
+              </div>
+            </div>
+            <div class="mt-3">
+              <button type="button" id="lookup-btn"
+                class="text-sm text-[#ffc803] hover:text-white border border-[#ffc803]/40 hover:border-[#ffc803] rounded px-4 py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                Look Up Flight
+              </button>
+              <p id="lookup-error" class="hidden text-[#E14D43] text-xs mt-2"></p>
+            </div>
+
+            <!-- Preview area -->
+            <div id="preview-area"></div>
+
+            <!-- Confirmed flights list -->
+            <div id="confirmed-flights-list" class="mt-4 space-y-2"></div>
+            <p id="flights-required" class="hidden text-[#E14D43] text-xs mt-2">Please add at least one flight.</p>
           </fieldset>
 
           <!-- Services -->
@@ -160,113 +186,205 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
   </div>
 </Layout>
 
-<script define:vars={{ airports, DIRECTUS_URL }}>
-  // ── Airport combobox ─────────────────────────────────────────
-  const airportSelect = (name, label) => `
-    <div class="relative airport-combobox" data-name="${name}">
-      <label class="block text-white/80 text-sm mb-1">${label} <span class="text-red-400">*</span></label>
-      <input type="text" autocomplete="off" placeholder="Type to search..."
-        class="combobox-input w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-yellow-400" />
-      <input type="hidden" name="${name}" class="combobox-value" required />
-      <ul class="combobox-list hidden absolute z-50 w-full mt-1 bg-[#1e2424] border border-white/20 rounded max-h-48 overflow-y-auto shadow-xl"></ul>
-    </div>`;
+<script define:vars={{ airports, DIRECTUS_URL, AERODATABOX_KEY }}>
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
-  // ── Flight template ──────────────────────────────────────────
-  let flightCount = 0;
+  // Airports keyed by IATA code for fast lookup
+  const airportByIata = {};
+  airports.forEach(a => { airportByIata[a.iataCode] = a; });
 
-  function addFlight() {
-    flightCount++;
-    const idx = flightCount;
-    const div = document.createElement('div');
-    div.className = 'bg-white/5 border border-white/10 rounded-lg p-4 relative';
-    div.dataset.flight = idx;
-    div.innerHTML = `
-      <div class="flex justify-between items-center mb-3">
-        <span class="text-white/60 text-sm font-bold">Flight ${idx}</span>
-        ${idx > 1 ? `<button type="button" onclick="removeFlight(${idx})" class="text-white/30 hover:text-red-400 text-sm transition-colors">Remove</button>` : ''}
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-white/80 text-sm mb-1">Flight Number <span class="text-red-400">*</span></label>
-          <input type="text" name="flightNumber_${idx}" required placeholder="EK407"
-            pattern="[A-Z]{2}[0-9]{1,4}"
-            title="Two uppercase letters followed by 1-4 digits (e.g. EK407)"
-            class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-yellow-400 uppercase"
-            oninput="this.value = this.value.toUpperCase()" />
-          <p class="text-white/30 text-xs mt-1">e.g. EK407, NZ1</p>
-        </div>
-        <div>
-          <label class="block text-white/80 text-sm mb-1">Flight Date <span class="text-red-400">*</span></label>
-          <input type="date" name="flightDate_${idx}" required
-            min="${new Date().toISOString().split('T')[0]}"
-            class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-yellow-400" />
-        </div>
-        ${airportSelect(`depAirport_${idx}`, 'Departure Airport')}
-        ${airportSelect(`arrAirport_${idx}`, 'Arrival Airport')}
-      </div>`;
-    document.getElementById('flights-list').appendChild(div);
+  // Confirmed flights accumulator: array of objects with all fields needed for Directus
+  const confirmedFlights = [];
+
+  // ── AeroDataBox lookup ───────────────────────────────────────
+  async function lookupFlight(flightNumber, isoDate) {
+    // AeroDataBox expects date as YYYY-MM-DD
+    const url = `https://aerodatabox.p.rapidapi.com/flights/number/${encodeURIComponent(flightNumber)}/${isoDate}?withAircraftImage=false&withLocation=false`;
+    const res = await fetch(url, {
+      headers: {
+        'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
+        'x-rapidapi-key': AERODATABOX_KEY,
+      },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`AeroDataBox error: HTTP ${res.status}`);
+    const data = await res.json();
+    // Returns array; pick first non-codeshare or just first result
+    const results = Array.isArray(data) ? data : [data];
+    return results[0] ?? null;
   }
 
-  window.removeFlight = (idx) => {
-    document.querySelector(`[data-flight="${idx}"]`)?.remove();
+  // ── Format local datetime string from AeroDataBox ────────────
+  // AeroDataBox returns e.g. "2026-03-23T22:45:00" — use as-is
+  function parseLocalDT(dt) {
+    if (!dt) return null;
+    return typeof dt === 'object' ? dt.local ?? dt.utc ?? null : dt;
+  }
+
+  // ── Render preview card ──────────────────────────────────────
+  function renderPreview(flight, rawNumber, isoDate) {
+    const dep = flight.departure;
+    const arr = flight.arrival;
+    const depIata = dep?.airport?.iata ?? '???';
+    const arrIata = arr?.airport?.iata ?? '???';
+    const depAirport = airportByIata[depIata];
+    const arrAirport = airportByIata[arrIata];
+    const airlineName = flight.airline?.name ?? rawNumber.match(/^[A-Z]{2}/)?.[0] ?? '';
+    const depCity = depAirport?.city ?? dep?.airport?.name ?? depIata;
+    const arrCity = arrAirport?.city ?? arr?.airport?.name ?? arrIata;
+    const depLocalDT = parseLocalDT(dep?.scheduledTime);
+    const arrLocalDT = parseLocalDT(arr?.scheduledTime);
+    const depTZ = depAirport?.timezone ?? '';
+    const arrTZ = arrAirport?.timezone ?? '';
+
+    // Format display times
+    function fmtDT(dtStr) {
+      if (!dtStr) return '—';
+      const d = new Date(dtStr);
+      return `${String(d.getDate()).padStart(2,'0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    // Build qualified flight number: EK407/23MAR
+    const dateObj = new Date(isoDate);
+    const qualified = `${rawNumber}/${String(dateObj.getUTCDate()).padStart(2,'0')}${MONTHS[dateObj.getUTCMonth()]}`;
+
+    const unknownDep = !depAirport;
+    const unknownArr = !arrAirport;
+    const warning = (unknownDep || unknownArr)
+      ? `<p class="text-[#E14D43] text-xs mt-3">${[
+          unknownDep ? `Departure airport ${depIata} is not in our database` : '',
+          unknownArr ? `Arrival airport ${arrIata} is not in our database` : '',
+        ].filter(Boolean).join(' · ')} — contact us if this looks wrong.</p>`
+      : '';
+
+    const previewData = {
+      qualified,
+      rawNumber,
+      depIata, arrIata,
+      depAirportId: depAirport?.id ?? null,
+      arrAirportId: arrAirport?.id ?? null,
+      depCity, arrCity,
+      depLocalDT, arrLocalDT,
+      depTZ, arrTZ,
+      airlineName,
+    };
+
+    document.getElementById('preview-area').innerHTML = `
+      <div id="preview-card" class="mt-4 bg-white/5 border border-[#ffc803]/40 rounded-lg p-4">
+        <div class="flex justify-between items-start mb-3">
+          <div>
+            <span class="text-white font-bold">${qualified}</span>
+            <span class="text-white/50 text-sm ml-2">${airlineName}</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-white/40 text-xs uppercase tracking-wide mb-1">Departure</p>
+            <p class="text-white font-bold">${depIata}</p>
+            <p class="text-white/70">${depCity}</p>
+            <p class="text-white/50 text-xs mt-1">${fmtDT(depLocalDT)}</p>
+            <p class="text-white/30 text-xs">${depTZ}</p>
+          </div>
+          <div>
+            <p class="text-white/40 text-xs uppercase tracking-wide mb-1">Arrival</p>
+            <p class="text-white font-bold">${arrIata}</p>
+            <p class="text-white/70">${arrCity}</p>
+            <p class="text-white/50 text-xs mt-1">${fmtDT(arrLocalDT)}</p>
+            <p class="text-white/30 text-xs">${arrTZ}</p>
+          </div>
+        </div>
+        ${warning}
+        <div class="flex gap-3 mt-4">
+          <button type="button" id="confirm-flight-btn"
+            class="text-sm bg-[#ffc803] hover:bg-[#ffc803]/80 text-black font-bold px-4 py-2 rounded transition-colors">
+            Add Flight
+          </button>
+          <button type="button" id="cancel-flight-btn"
+            class="text-sm text-white/40 hover:text-white border border-white/20 hover:border-white/60 px-4 py-2 rounded transition-colors">
+            Try Again
+          </button>
+        </div>
+      </div>`;
+
+    document.getElementById('confirm-flight-btn').addEventListener('click', () => confirmFlight(previewData));
+    document.getElementById('cancel-flight-btn').addEventListener('click', cancelPreview);
+  }
+
+  function cancelPreview() {
+    document.getElementById('preview-area').innerHTML = '';
+    document.getElementById('lookup-flight-number').value = '';
+    document.getElementById('lookup-flight-date').value = '';
+    document.getElementById('lookup-flight-number').focus();
+  }
+
+  function confirmFlight(data) {
+    confirmedFlights.push(data);
+    document.getElementById('preview-area').innerHTML = '';
+    document.getElementById('lookup-flight-number').value = '';
+    document.getElementById('lookup-flight-date').value = '';
+    document.getElementById('flights-required').classList.add('hidden');
+    renderConfirmedList();
+  }
+
+  // ── Confirmed flights list ───────────────────────────────────
+  function renderConfirmedList() {
+    const list = document.getElementById('confirmed-flights-list');
+    if (confirmedFlights.length === 0) { list.innerHTML = ''; return; }
+    list.innerHTML = confirmedFlights.map((f, i) => `
+      <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded px-4 py-3 text-sm">
+        <div>
+          <span class="text-white font-bold">${f.qualified}</span>
+          <span class="text-white/50 ml-2">${f.depIata} → ${f.arrIata}</span>
+          <span class="text-white/30 ml-2">${f.airlineName}</span>
+        </div>
+        <button type="button" onclick="removeConfirmedFlight(${i})"
+          class="text-white/30 hover:text-[#E14D43] text-xs transition-colors ml-4">Remove</button>
+      </div>`).join('');
+  }
+
+  window.removeConfirmedFlight = (i) => {
+    confirmedFlights.splice(i, 1);
+    renderConfirmedList();
   };
 
-  // ── Combobox logic ───────────────────────────────────────────
-  function initComboboxes(container) {
-    container.querySelectorAll('.airport-combobox').forEach(box => {
-      const input = box.querySelector('.combobox-input');
-      const hidden = box.querySelector('.combobox-value');
-      const list = box.querySelector('.combobox-list');
+  // ── Lookup button ────────────────────────────────────────────
+  document.getElementById('lookup-btn').addEventListener('click', async () => {
+    const numInput = document.getElementById('lookup-flight-number');
+    const dateInput = document.getElementById('lookup-flight-date');
+    const errorEl = document.getElementById('lookup-error');
+    const btn = document.getElementById('lookup-btn');
 
-      input.addEventListener('input', () => {
-        const q = input.value.toLowerCase();
-        hidden.value = '';
-        if (!q) { list.classList.add('hidden'); return; }
+    const flightNumber = numInput.value.trim().toUpperCase();
+    const flightDate = dateInput.value;
 
-        const matches = airports.filter(a =>
-          a.iataCode.toLowerCase().includes(q) ||
-          a.name.toLowerCase().includes(q) ||
-          a.city.toLowerCase().includes(q)
-        ).slice(0, 20);
+    errorEl.classList.add('hidden');
 
-        list.innerHTML = matches.length
-          ? matches.map(a =>
-              `<li data-code="${a.iataCode}" class="px-3 py-2 text-sm text-white cursor-pointer hover:bg-white/10">
-                <span class="font-bold">${a.iataCode}</span> — ${a.name}, ${a.city}
-              </li>`).join('')
-          : `<li class="px-3 py-2 text-sm text-white/40">No airports found</li>`;
+    if (!flightNumber || !flightDate) {
+      errorEl.textContent = 'Please enter a flight number and date.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
 
-        list.classList.remove('hidden');
-      });
+    btn.disabled = true;
+    btn.textContent = 'Looking up…';
+    document.getElementById('preview-area').innerHTML = '';
 
-      list.addEventListener('click', e => {
-        const li = e.target.closest('li[data-code]');
-        if (!li) return;
-        const code = li.dataset.code;
-        const airport = airports.find(a => a.iataCode === code);
-        input.value = `${airport.iataCode} — ${airport.name}, ${airport.city}`;
-        hidden.value = airport.id;
-        list.classList.add('hidden');
-      });
-
-      document.addEventListener('click', e => {
-        if (!box.contains(e.target)) list.classList.add('hidden');
-      });
-    });
-  }
-
-  function addFlight_withCombobox() {
-    addFlight();
-    const flightEl = document.querySelector(`[data-flight="${flightCount}"]`);
-    if (flightEl) initComboboxes(flightEl);
-  }
-
-  document.getElementById('add-flight').addEventListener('click', addFlight_withCombobox);
-
-  // Add first flight on load
-  addFlight();
-  const firstFlight = document.querySelector('[data-flight="1"]');
-  if (firstFlight) initComboboxes(firstFlight);
+    try {
+      const flight = await lookupFlight(flightNumber, flightDate);
+      if (!flight) {
+        errorEl.textContent = `Flight ${flightNumber} not found for ${flightDate}. Check the number and date and try again.`;
+        errorEl.classList.remove('hidden');
+      } else {
+        renderPreview(flight, flightNumber, flightDate);
+      }
+    } catch (err) {
+      errorEl.textContent = 'Could not look up flight. Please try again.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Look Up Flight';
+    }
+  });
 
   // ── Token lookup ─────────────────────────────────────────────
   const params = new URLSearchParams(window.location.search);
@@ -290,10 +408,8 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         return;
       }
 
-      // Set hidden company ID
       document.getElementById('company-id').value = company.id;
 
-      // Show company logo
       if (company.logo) {
         const logoEl = document.getElementById('company-logo');
         logoEl.src = `${DIRECTUS_URL}/assets/${company.logo}`;
@@ -303,7 +419,6 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
 
       document.getElementById('form-container').classList.remove('hidden');
 
-      // Load available tags for this company
       const tagsRes = await fetch(
         `${DIRECTUS_URL}/items/tags?filter[petTravelCompany][_eq]=${company.id}&filter[status][_eq]=available&fields=id,tagId,tagType&sort=tagId`
       );
@@ -327,16 +442,15 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
 
   // ── Tag select toggle ────────────────────────────────────────
   document.getElementById('serviceTag').addEventListener('change', function() {
-    const container = document.getElementById('tag-select-container');
-    container.classList.toggle('hidden', !this.checked);
+    document.getElementById('tag-select-container').classList.toggle('hidden', !this.checked);
   });
 
   // ── Helpers ──────────────────────────────────────────────────
   async function findOrCreate(collection, filter, createPayload) {
-    const params = Object.entries(filter)
+    const qs = Object.entries(filter)
       .map(([k, v]) => `filter[${k}][_eq]=${encodeURIComponent(v)}`)
       .join('&');
-    const findRes = await fetch(`${DIRECTUS_URL}/items/${collection}?${params}&fields=id&limit=1`);
+    const findRes = await fetch(`${DIRECTUS_URL}/items/${collection}?${qs}&fields=id&limit=1`);
     const found = (await findRes.json()).data?.[0];
     if (found) return found.id;
     const createRes = await fetch(`${DIRECTUS_URL}/items/${collection}`, {
@@ -348,54 +462,41 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     return (await createRes.json()).data?.id;
   }
 
-  // Airline cache to avoid re-fetching for the same prefix within a submission
-  const airlineCache = {};
-  async function lookupAirline(flightNumber) {
-    const prefix = flightNumber.match(/^[A-Z]{2}/)?.[0];
-    if (!prefix) return null;
-    if (prefix in airlineCache) return airlineCache[prefix];
-    const res = await fetch(`${DIRECTUS_URL}/items/airlines?filter[iataCode][_eq]=${prefix}&fields=id&limit=1`);
-    const id = (await res.json()).data?.[0]?.id ?? null;
-    airlineCache[prefix] = id;
-    return id;
-  }
-
-  async function findOrCreateFlight(flightNumber, flightDate, depAirportId, arrAirportId) {
-    // Format flight number with date suffix: EK407 + 2026-04-11 → EK407/11APR
-    const d = new Date(flightDate);
-    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const dateSuffix = `${String(d.getUTCDate()).padStart(2,'0')}${months[d.getUTCMonth()]}`;
-    const qualifiedNumber = `${flightNumber}/${dateSuffix}`;
-
-    // Dedup by qualified flight number + airports
-    const params = [
-      `filter[flightNumber][_eq]=${encodeURIComponent(qualifiedNumber)}`,
-      `filter[departureAirport][_eq]=${encodeURIComponent(depAirportId)}`,
-      `filter[destinationAirport][_eq]=${encodeURIComponent(arrAirportId)}`,
-      'fields=id',
-      'limit=1',
-    ].join('&');
-    const findRes = await fetch(`${DIRECTUS_URL}/items/flights?${params}`);
+  async function findOrCreateFlight(f) {
+    // Dedup by qualified number + airports
+    const qs = [
+      `filter[flightNumber][_eq]=${encodeURIComponent(f.qualified)}`,
+      f.depAirportId ? `filter[departureAirport][_eq]=${f.depAirportId}` : '',
+      f.arrAirportId ? `filter[destinationAirport][_eq]=${f.arrAirportId}` : '',
+      'fields=id', 'limit=1',
+    ].filter(Boolean).join('&');
+    const findRes = await fetch(`${DIRECTUS_URL}/items/flights?${qs}`);
     const found = (await findRes.json()).data?.[0];
     if (found) return found.id;
 
-    // Resolve airline and timezone from airports data
-    const depAirport = airports.find(a => a.id === Number(depAirportId));
-    const arrAirport = airports.find(a => a.id === Number(arrAirportId));
-    const airlineId = await lookupAirline(flightNumber);
+    // Look up airline FK
+    const prefix = f.rawNumber.match(/^[A-Z]{2}/)?.[0];
+    let airlineId = null;
+    if (prefix) {
+      const ar = await fetch(`${DIRECTUS_URL}/items/airlines?filter[iataCode][_eq]=${prefix}&fields=id&limit=1`);
+      airlineId = (await ar.json()).data?.[0]?.id ?? null;
+    }
+
+    const body = {
+      flightNumber: f.qualified,
+      ...(f.depLocalDT ? { startDateTime: f.depLocalDT } : {}),
+      ...(f.arrLocalDT ? { endDateTime: f.arrLocalDT } : {}),
+      ...(f.depAirportId ? { departureAirport: f.depAirportId } : {}),
+      ...(f.arrAirportId ? { destinationAirport: f.arrAirportId } : {}),
+      ...(f.depTZ ? { startDisplayTimezone: f.depTZ } : {}),
+      ...(f.arrTZ ? { endDisplayTimezone: f.arrTZ } : {}),
+      ...(airlineId ? { airline: airlineId } : {}),
+    };
 
     const createRes = await fetch(`${DIRECTUS_URL}/items/flights`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        flightNumber: qualifiedNumber,
-        startDateTime: flightDate + 'T00:00:00',
-        departureAirport: Number(depAirportId),
-        destinationAirport: Number(arrAirportId),
-        ...(depAirport?.timezone ? { startDisplayTimezone: depAirport.timezone } : {}),
-        ...(arrAirport?.timezone ? { endDisplayTimezone: arrAirport.timezone } : {}),
-        ...(airlineId ? { airline: airlineId } : {}),
-      }),
+      body: JSON.stringify(body),
     });
     if (!createRes.ok) throw new Error(`Failed to create flight: HTTP ${createRes.status}`);
     return (await createRes.json()).data?.id;
@@ -410,12 +511,18 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     btn.textContent = 'Submitting…';
     errorEl.classList.add('hidden');
 
+    if (confirmedFlights.length === 0) {
+      document.getElementById('flights-required').classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Submit Reservation Request';
+      return;
+    }
+
     const form = e.target;
     const email = form.email.value;
     const petName = form.petName.value;
 
     try {
-      // ── Find or create customer (dedup by email) ─────────────
       btn.textContent = 'Looking up customer…';
       const customerId = await findOrCreate(
         'customers',
@@ -428,7 +535,6 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         }
       );
 
-      // ── Find or create pet (dedup by name + customer) ────────
       btn.textContent = 'Looking up pet…';
       const petId = await findOrCreate(
         'pets',
@@ -436,7 +542,6 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         { name: petName, type: form.petBreed.value, customer: customerId }
       );
 
-      // ── Check reference uniqueness ───────────────────────────
       btn.textContent = 'Checking reference…';
       const companyId = document.getElementById('company-id').value;
       const reference = form.companyReference.value.trim();
@@ -445,28 +550,18 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
       );
       const refExists = (await refCheck.json()).data?.length > 0;
       if (refExists) {
-        throw new Object({ userMessage: 'This booking reference has already been submitted. Please check your reference number or contact us if you believe this is an error.' });
+        throw { userMessage: 'This booking reference has already been submitted. Please check your reference number or contact us if you believe this is an error.' };
       }
 
-      // ── Collect and dedup flights ────────────────────────────
       btn.textContent = 'Processing flights…';
       const flightIds = [];
       const flightNumbers = [];
-      for (const el of document.querySelectorAll('[data-flight]')) {
-        const idx = el.dataset.flight;
-        const flightNumber = el.querySelector(`[name="flightNumber_${idx}"]`).value;
-        const flightDate = el.querySelector(`[name="flightDate_${idx}"]`).value;
-        const depAirport = el.querySelector(`[name="depAirport_${idx}"]`).value;
-        const arrAirport = el.querySelector(`[name="arrAirport_${idx}"]`).value;
-        const flightId = await findOrCreateFlight(flightNumber, flightDate, depAirport, arrAirport);
+      for (const f of confirmedFlights) {
+        const flightId = await findOrCreateFlight(f);
         flightIds.push(flightId);
-        // Collect the qualified number (EK407/11APR) for the confirmation email
-        const d = new Date(flightDate);
-        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-        flightNumbers.push(`${flightNumber}/${String(d.getUTCDate()).padStart(2,'0')}${months[d.getUTCMonth()]}`);
+        flightNumbers.push(f.qualified);
       }
 
-      // ── Submit to flow ───────────────────────────────────────
       btn.textContent = 'Creating trip…';
       const payload = {
         petId,
