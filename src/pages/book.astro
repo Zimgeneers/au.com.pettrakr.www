@@ -477,20 +477,30 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
   });
 
   // ── Helpers ──────────────────────────────────────────────────
-  async function findOrCreate(collection, filter, createPayload) {
-    const qs = Object.entries(filter)
-      .map(([k, v]) => `filter[${k}][_eq]=${encodeURIComponent(v)}`)
-      .join('&');
-    const findRes = await fetch(`${DIRECTUS_URL}/items/${collection}?${qs}&fields=id&limit=1`);
-    const found = (await findRes.json()).data?.[0];
-    if (found) return found.id;
+
+  // Create-first pattern: attempt POST, on RECORD_NOT_UNIQUE fetch the existing record.
+  // This avoids needing public read access for dedup lookups.
+  async function createOrFind(collection, createPayload, lookupFilter) {
     const createRes = await fetch(`${DIRECTUS_URL}/items/${collection}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(createPayload),
     });
-    if (!createRes.ok) throw new Error(`Failed to create ${collection}: HTTP ${createRes.status}`);
-    return (await createRes.json()).data?.id;
+    if (createRes.ok) return (await createRes.json()).data?.id;
+
+    const err = await createRes.json();
+    const isConflict = err?.errors?.some(e => e.extensions?.code === 'RECORD_NOT_UNIQUE');
+    if (!isConflict) throw new Error(`Failed to create ${collection}: HTTP ${createRes.status}`);
+
+    // Already exists — fetch by the unique field(s)
+    const qs = Object.entries(lookupFilter)
+      .map(([k, v]) => `filter[${k}][_eq]=${encodeURIComponent(v)}`)
+      .join('&');
+    const findRes = await fetch(`${DIRECTUS_URL}/items/${collection}?${qs}&fields=id&limit=1`);
+    if (!findRes.ok) throw new Error(`Failed to look up existing ${collection}`);
+    const existing = (await findRes.json()).data?.[0];
+    if (!existing) throw new Error(`${collection} conflict but record not found`);
+    return existing.id;
   }
 
   async function findOrCreateFlight(f) {
@@ -555,23 +565,34 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
 
     try {
       btn.textContent = 'Looking up customer…';
-      const customerId = await findOrCreate(
+      const customerId = await createOrFind(
         'customers',
-        { email },
         {
           firstName: form.firstName.value,
           lastName: form.lastName.value,
           email,
           phoneNumber: form.phone.value,
-        }
+        },
+        { email }
       );
 
       btn.textContent = 'Looking up pet…';
-      const petId = await findOrCreate(
-        'pets',
-        { name: petName, customer: customerId },
-        { name: petName, type: form.petBreed.value, customer: customerId }
-      );
+      // Pets have no unique constraint on name+customer, so use read-first pattern
+      const petFindQs = `filter[name][_eq]=${encodeURIComponent(petName)}&filter[customer][_eq]=${customerId}&fields=id&limit=1`;
+      const petFindRes = await fetch(`${DIRECTUS_URL}/items/pets?${petFindQs}`);
+      const existingPet = (await petFindRes.json()).data?.[0];
+      let petId;
+      if (existingPet) {
+        petId = existingPet.id;
+      } else {
+        const petCreateRes = await fetch(`${DIRECTUS_URL}/items/pets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: petName, type: form.petBreed.value, customer: customerId }),
+        });
+        if (!petCreateRes.ok) throw new Error(`Failed to create pet: HTTP ${petCreateRes.status}`);
+        petId = (await petCreateRes.json()).data?.id;
+      }
 
       btn.textContent = 'Checking reference…';
       const companyId = document.getElementById('company-id').value;
