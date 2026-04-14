@@ -638,7 +638,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
         flightNumbers,
       };
 
-      const res = await fetch(`${DIRECTUS_URL}/flows/trigger/13b3c28a-0a2a-468e-8392-20db3d85dab1`, {
+      const res = await fetch(`${DIRECTUS_URL}/flows/trigger/6d94c8aa-d667-41ee-8b44-ef303b7f124c`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
