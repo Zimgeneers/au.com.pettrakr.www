@@ -1,0 +1,51 @@
+---
+import type { Section } from '../../lib/directus';
+import { getSectionStyle } from './sectionHelpers';
+
+interface Props { section: Section }
+const { section } = Astro.props;
+const { bgClass, bgStyle, isDark, headingClass } = getSectionStyle(section);
+
+const items = (section.items ?? []).filter(i => i.type === 'pricing').sort((a, b) => a.sort - b.sort);
+
+function fmt(val: number | null | undefined) {
+  if (val == null) return '—';
+  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 0 }).format(val);
+}
+---
+
+<section class={`py-16 px-4 ${bgClass}`} style={bgStyle}>
+  <div class="relative max-w-4xl mx-auto">
+    {section.heading && <h2 class={`${headingClass} text-center`}>{section.heading}</h2>}
+    {section.body && <div class={`text-center opacity-60 mb-10 ${isDark ? 'text-white' : 'text-current'}`} set:html={section.body} />}
+    {items.length > 0 && (
+      <div class="overflow-x-auto">
+        <table class={`w-full text-sm border-collapse ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <thead>
+            <tr class={`border-b ${isDark ? 'border-white/20' : 'border-gray-200'}`}>
+              <th class="text-left py-3 pr-4 font-semibold">Route</th>
+              <th class="text-right py-3 px-4 font-semibold">Price</th>
+              <th class="text-right py-3 px-4 font-semibold">Deposit</th>
+              <th class="text-right py-3 pl-4 font-semibold">Reservation Fee</th>
+            </tr>
+          </thead>
+          <tbody class={`divide-y ${isDark ? 'divide-white/10' : 'divide-gray-100'}`}>
+            {items.map((item) => (
+              <tr>
+                <td class="py-3 pr-4">{item.heading ?? '—'}</td>
+                <td class="text-right py-3 px-4 tabular-nums">{fmt(item.price)}</td>
+                <td class="text-right py-3 px-4 tabular-nums">{fmt(item.deposit)}</td>
+                <td class="text-right py-3 pl-4 tabular-nums">{fmt(item.reservationFee)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+    {items.length > 0 && items.some(i => i.body) && (
+      <div class={`mt-6 space-y-1 text-xs ${isDark ? 'text-white/50' : 'text-gray-400'}`}>
+        {items.filter(i => i.body).map(i => <p>{i.body}</p>)}
+      </div>
+    )}
+  </div>
+</section>

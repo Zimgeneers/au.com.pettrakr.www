@@ -5,6 +5,7 @@ import TextImageSection from './TextImageSection.astro';
 import CtaSection from './CtaSection.astro';
 import CardsSection from './CardsSection.astro';
 import FaqSection from './FaqSection.astro';
+import PricingSection from './PricingSection.astro';
 
 interface Props { section: Section }
 const { section } = Astro.props;
@@ -15,3 +16,4 @@ const { section } = Astro.props;
 {section.type === 'cta' && <CtaSection section={section} />}
 {section.type === 'cards' && <CardsSection section={section} />}
 {section.type === 'faq' && <FaqSection section={section} />}
+{section.type === 'pricing' && <PricingSection section={section} />}

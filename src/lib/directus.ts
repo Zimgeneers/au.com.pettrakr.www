@@ -72,13 +72,16 @@ export interface Section {
 
 export interface SectionItem {
   id: number;
-  type: 'card' | 'quote' | 'feature' | 'logo' | 'faq';
+  type: 'card' | 'quote' | 'feature' | 'logo' | 'faq' | 'pricing';
   heading: string | null;
   body: string | null;
   image: string | null;
   quote: string | null;
   author: string | null;
   link: string | null;
+  price: number | null;
+  deposit: number | null;
+  reservationFee: number | null;
   sort: number;
 }
 
@@ -125,7 +128,7 @@ export async function getPageBySlug(slug: string): Promise<Page | null> {
 }
 
 export async function getSectionsByPage(pageId: number): Promise<Section[]> {
-  const fields = 'id,type,sort,heading,subheading,body,ctaText,ctaUrl,image,imagePosition,background,backgroundImage,parallax,columns,items.id,items.type,items.sort,items.heading,items.body,items.image,items.quote,items.author,items.link';
+  const fields = 'id,type,sort,heading,subheading,body,ctaText,ctaUrl,image,imagePosition,background,backgroundImage,parallax,columns,items.id,items.type,items.sort,items.heading,items.body,items.image,items.quote,items.author,items.link,items.price,items.deposit,items.reservationFee';
   const params = new URLSearchParams({ 'filter[page][_eq]': String(pageId), 'sort': 'sort', 'fields': fields });
   return fetchDirectus<Section[]>(`/items/sections?${params}`, []);
 }
