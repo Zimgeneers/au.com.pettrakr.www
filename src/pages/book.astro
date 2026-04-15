@@ -551,6 +551,14 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     errorEl.classList.add('hidden');
 
     const form = e.target;
+
+    if (!form.serviceDevice.checked && !form.serviceTag.checked) {
+      errorEl.textContent = 'Please select at least one service (Device or TrakrTag).';
+      errorEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Submit Reservation Request';
+      return;
+    }
     const email = form.email.value;
     const petName = form.petName.value;
 
