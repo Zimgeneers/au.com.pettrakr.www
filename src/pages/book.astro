@@ -104,11 +104,10 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
 
           <!-- Flights -->
           <fieldset>
-            <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Flight Details</legend>
+            <legend class="text-[#ffc803] font-bold text-sm uppercase tracking-wider mb-4">Flight Details <span class="text-white/40 normal-case font-normal">(optional)</span></legend>
 
             <!-- Confirmed flights list -->
             <div id="confirmed-flights-list" class="space-y-2 mb-4"></div>
-            <p id="flights-required" class="hidden text-[#E14D43] text-xs mb-3">Please add at least one flight.</p>
 
             <!-- Add a Flight panel -->
             <div class="bg-white/5 border border-white/10 rounded-lg p-4">
@@ -346,7 +345,6 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     document.getElementById('lookup-flight-number').value = '';
     document.getElementById('lookup-flight-date').value = '';
     document.getElementById('lookup-error').classList.add('hidden');
-    document.getElementById('flights-required').classList.add('hidden');
     renderConfirmedList();
 
     // Flash confirmation
@@ -551,13 +549,6 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     btn.disabled = true;
     btn.textContent = 'Submitting…';
     errorEl.classList.add('hidden');
-
-    if (confirmedFlights.length === 0) {
-      document.getElementById('flights-required').classList.remove('hidden');
-      btn.disabled = false;
-      btn.textContent = 'Submit Reservation Request';
-      return;
-    }
 
     const form = e.target;
     const email = form.email.value;
