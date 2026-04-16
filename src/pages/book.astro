@@ -476,16 +476,22 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
   function renderConfirmedList() {
     const list = document.getElementById('confirmed-flights-list');
     if (confirmedFlights.length === 0) { list.innerHTML = ''; return; }
-    list.innerHTML = confirmedFlights.map((f, i) => `
+    list.innerHTML = confirmedFlights.map((f, i) => {
+      const arrInfo = f.arrLocalDT
+        ? `<span class="text-white/40 text-xs ml-2">arrives ${fmtFlightDT(f.arrLocalDT)}${f.arrTZ ? ' ' + tzAbbr(f.arrTZ) : ''}</span>`
+        : '';
+      return `
       <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded px-4 py-3 text-sm">
         <div>
           <span class="text-white font-bold">${f.qualified}</span>
           <span class="text-white/50 ml-2">${f.depIata} → ${f.arrIata}</span>
           <span class="text-white/30 ml-2">${f.airlineName}</span>
+          ${arrInfo}
         </div>
         <button type="button" onclick="removeConfirmedFlight(${i})"
           class="text-white/30 hover:text-[#E14D43] text-xs transition-colors ml-4">Remove</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   window.removeConfirmedFlight = (i) => {
