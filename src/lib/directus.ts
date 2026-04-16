@@ -47,6 +47,7 @@ export interface Page {
   heroCtaText: string;
   heroCtaUrl: string;
   heroImage: string | null;
+  heroBackground: 'dark' | 'black' | 'pettrakr' | 'gray' | 'white' | null;
   seoTitle: string;
   seoDescription: string;
   seoImage: string | null;
@@ -61,6 +62,7 @@ export interface Section {
   body: string;
   ctaText: string;
   ctaUrl: string;
+  ctaNewTab: boolean | null;
   image: string | null;
   imagePosition: 'left' | 'right' | null;
   background: 'white' | 'gray' | 'dark' | 'black' | 'pettrakr' | null;
@@ -79,6 +81,7 @@ export interface SectionItem {
   quote: string | null;
   author: string | null;
   link: string | null;
+  linkNewTab: boolean | null;
   price: number | null;
   deposit: number | null;
   reservationFee: number | null;
@@ -128,7 +131,7 @@ export async function getPageBySlug(slug: string): Promise<Page | null> {
 }
 
 export async function getSectionsByPage(pageId: number): Promise<Section[]> {
-  const fields = 'id,type,sort,heading,subheading,body,ctaText,ctaUrl,image,imagePosition,background,backgroundImage,parallax,columns,items.id,items.type,items.sort,items.heading,items.body,items.image,items.quote,items.author,items.link,items.price,items.deposit,items.reservationFee';
+  const fields = 'id,type,sort,heading,subheading,body,ctaText,ctaUrl,ctaNewTab,image,imagePosition,background,backgroundImage,parallax,columns,items.id,items.type,items.sort,items.heading,items.body,items.image,items.quote,items.author,items.link,items.linkNewTab,items.price,items.deposit,items.reservationFee';
   const params = new URLSearchParams({ 'filter[page][_eq]': String(pageId), 'sort': 'sort', 'fields': fields });
   return fetchDirectus<Section[]>(`/items/sections?${params}`, []);
 }

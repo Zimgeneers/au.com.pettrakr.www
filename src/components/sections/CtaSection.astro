@@ -14,7 +14,9 @@ const { bgClass, bgStyle, isDark, proseClass, headingClass } = getSectionStyle(s
     {section.body && <div class={`${proseClass} mb-8`} set:html={section.body} />}
     {section.ctaText && (
       <a href={section.ctaUrl || '/book'}
-        class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg">
+        class="inline-block bg-[#E14D43] hover:bg-[#494578] text-white font-bold px-8 py-3 rounded transition-colors text-lg"
+        target={section.ctaNewTab ? '_blank' : undefined}
+        rel={section.ctaNewTab ? 'noopener noreferrer' : undefined}>
         {section.ctaText}
       </a>
     )}

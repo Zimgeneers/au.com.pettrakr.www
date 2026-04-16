@@ -9,7 +9,7 @@ const imgUrl = fileUrl(item.image);
 
 {imgUrl ? (
   item.link ? (
-    <a href={item.link} target="_blank" rel="noopener noreferrer" title={item.heading ?? ''}
+    <a href={item.link} target={item.linkNewTab ? '_blank' : undefined} rel={item.linkNewTab ? 'noopener noreferrer' : undefined} title={item.heading ?? ''}
       class="bg-white rounded-xl p-4 hover:opacity-90 transition-opacity aspect-square flex items-center justify-center">
       <img src={imgUrl} alt={item.heading ?? ''} class="w-full h-full object-contain" />
     </a>

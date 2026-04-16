@@ -8,6 +8,13 @@ const sections = page ? await getSectionsByPage(page.id) : [];
 const airlines = await getApprovedAirlines();
 
 const heroImageUrl = page ? fileUrl(page.heroImage) : null;
+const heroBgStyle = heroImageUrl
+  ? `background-image: url('${heroImageUrl}'); background-size: cover; background-position: center;`
+  : page?.heroBackground === 'black'    ? 'background-color: #000000;'
+  : page?.heroBackground === 'pettrakr' ? 'background: linear-gradient(135deg, #171D1D 0%, #2D2B55 100%);'
+  : page?.heroBackground === 'gray'     ? 'background-color: #f3f4f6;'
+  : page?.heroBackground === 'white'    ? 'background-color: #ffffff;'
+  : 'background-color: #171D1D;';
 ---
 
 <Layout
@@ -20,7 +27,7 @@ const heroImageUrl = page ? fileUrl(page.heroImage) : null;
   {page && (
     <section
       class="relative min-h-[80vh] flex items-center justify-center text-white text-center"
-      style={heroImageUrl ? `background-image: url('${heroImageUrl}'); background-size: cover; background-position: center;` : 'background-color: #171D1D;'}
+      style={heroBgStyle}
     >
       <div class="absolute inset-0 bg-black/50"></div>
       <div class="relative z-10 max-w-3xl mx-auto px-4">

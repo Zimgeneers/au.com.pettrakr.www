@@ -16,7 +16,9 @@ const cardBg   = isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-blac
     {item.heading && <h3 class="text-current font-bold text-lg mb-1">{item.heading}</h3>}
     {item.body && <div class="text-current opacity-70 text-sm flex-1" set:html={item.body} />}
     {item.link && (
-      <a href={item.link} class="mt-4 text-[#ffc803] text-sm hover:underline">Learn more →</a>
+      <a href={item.link} class="mt-4 text-[#ffc803] text-sm hover:underline"
+        target={item.linkNewTab ? '_blank' : undefined}
+        rel={item.linkNewTab ? 'noopener noreferrer' : undefined}>Learn more →</a>
     )}
   </div>
 </div>
