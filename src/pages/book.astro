@@ -361,14 +361,18 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     return typeof dt === 'object' ? dt.local ?? dt.utc ?? null : dt;
   }
 
-  // Format a local datetime string without timezone conversion
+  // Format a local datetime string without timezone conversion.
+  // Handles both ISO 8601 ("2026-04-17T22:55+08:00") and AeroDataBox space-separated
+  // format ("2026-04-17 22:55+08:00"). Strips the UTC offset — the time is already local.
   function fmtFlightDT(dtStr) {
     if (!dtStr) return '—';
-    const [datePart, timePart] = dtStr.split('T');
-    if (!datePart || !timePart) return dtStr;
+    const [datePart, rest] = dtStr.split(/[T ]/);
+    if (!datePart || !rest) return dtStr;
+    const timePart = rest.replace(/[+-]\d{2}:\d{2}$|Z$/, '');
     const [y, m, d] = datePart.split('-');
     const [h, min] = timePart.split(':');
-    return `${d.padStart(2,'0')} ${MONTHS[parseInt(m)-1]} ${y} ${h.padStart(2,'0')}:${min.padStart(2,'0')}`;
+    if (!y || !m || !d || !h || !min) return dtStr;
+    return `${d.padStart(2,'0')} ${MONTHS[parseInt(m,10)-1]} ${y} ${h.padStart(2,'0')}:${min.padStart(2,'0')}`;
   }
 
   // ── Render flight preview card ───────────────────────────────
