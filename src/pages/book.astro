@@ -282,7 +282,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
   </div>
 </Layout>
 
-<script define:vars={{ airports, DIRECTUS_URL, AERODATABOX_KEY }}>
+<script is:inline define:vars={{ airports, DIRECTUS_URL, AERODATABOX_KEY }}>
   const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
   // Airports keyed by IATA code for fast lookup
@@ -424,14 +424,14 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
             <p class="text-white font-bold">${depIata}</p>
             <p class="text-white/70">${depCity}</p>
             <p class="text-white/50 text-xs mt-1">${fmtFlightDT(depLocalDT)}</p>
-            ${depTZ ? `<p class="text-white/40 text-xs">${tzAbbr(depTZ)}</p>` : ''}
+            ${depTZ ? `<p class="text-white/40 text-xs">${depTZ}</p>` : ''}
           </div>
           <div>
             <p class="text-white/40 text-xs uppercase tracking-wide mb-1">Arrival</p>
             <p class="text-white font-bold">${arrIata}</p>
             <p class="text-white/70">${arrCity}</p>
             <p class="text-white/50 text-xs mt-1">${fmtFlightDT(arrLocalDT)}</p>
-            ${arrTZ ? `<p class="text-white/40 text-xs">${tzAbbr(arrTZ)}</p>` : ''}
+            ${arrTZ ? `<p class="text-white/40 text-xs">${arrTZ}</p>` : ''}
           </div>
         </div>
         ${warning}
