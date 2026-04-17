@@ -391,8 +391,19 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     const depTZ = depAirport?.timezone ?? '';
     const arrTZ = arrAirport?.timezone ?? '';
 
-    const dateObj = new Date(isoDate);
-    const qualified = `${rawNumber}/${String(dateObj.getUTCDate()).padStart(2,'0')}${MONTHS[dateObj.getUTCMonth()]}`;
+    // Use the actual local departure date from AeroDataBox for the identifier.
+    // The user-entered date is a UTC lookup key and may differ from the local
+    // departure date (e.g. EK421 departs Perth 22:20 on 19 Apr, not 20 Apr).
+    let qualDate;
+    if (depLocalDT) {
+      const [depDatePart] = depLocalDT.split(/[T ]/);
+      const [, dM, dD] = depDatePart.split('-');
+      qualDate = `${dD.padStart(2,'0')}${MONTHS[parseInt(dM,10)-1]}`;
+    } else {
+      const dateObj = new Date(isoDate);
+      qualDate = `${String(dateObj.getUTCDate()).padStart(2,'0')}${MONTHS[dateObj.getUTCMonth()]}`;
+    }
+    const qualified = `${rawNumber}/${qualDate}`;
 
     const unknownDep = !depAirport;
     const unknownArr = !arrAirport;
