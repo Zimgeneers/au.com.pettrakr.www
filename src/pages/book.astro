@@ -150,7 +150,7 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
                   <p class="text-white/30 text-xs mt-1">e.g. EK407, QR901</p>
                 </div>
                 <div>
-                  <label class="block text-white/80 text-sm mb-1">Flight Date <span class="text-white/40 font-normal">(as shown on your ticket)</span></label>
+                  <label class="block text-white/80 text-sm mb-1">Flight Date</label>
                   <input type="date" id="lookup-flight-date"
                     class="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-[#ffc803]" />
                 </div>
@@ -340,19 +340,52 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
   }
 
   // ── AeroDataBox lookup ───────────────────────────────────────
+  // AeroDataBox indexes some flights by arrival date at the destination rather
+  // than local departure date. For EK421 PER→DXB, querying "18 Apr" returns
+  // the flight departing Perth on 17 Apr. We detect the offset and retry so
+  // the agent can always enter the local Perth departure date.
   async function lookupFlight(flightNumber, isoDate) {
-    const url = `https://aerodatabox.p.rapidapi.com/flights/number/${encodeURIComponent(flightNumber)}/${isoDate}?withAircraftImage=false&withLocation=false`;
-    const res = await fetch(url, {
-      headers: {
-        'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
-        'x-rapidapi-key': AERODATABOX_KEY,
-      },
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`AeroDataBox error: HTTP ${res.status}`);
-    const data = await res.json();
-    const results = Array.isArray(data) ? data : [data];
-    return results[0] ?? null;
+    function addDays(iso, n) {
+      const d = new Date(iso + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() + n);
+      return d.toISOString().slice(0, 10);
+    }
+    function localDepDate(flight) {
+      const dt = parseLocalDT(flight?.departure?.scheduledTime);
+      return dt ? dt.split(/[T ]/)[0] : null;
+    }
+    async function query(date) {
+      const url = `https://aerodatabox.p.rapidapi.com/flights/number/${encodeURIComponent(flightNumber)}/${date}?withAircraftImage=false&withLocation=false`;
+      const res = await fetch(url, {
+        headers: {
+          'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
+          'x-rapidapi-key': AERODATABOX_KEY,
+        },
+      });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`AeroDataBox error: HTTP ${res.status}`);
+      const data = await res.json();
+      const results = Array.isArray(data) ? data : [data];
+      return results[0] ?? null;
+    }
+
+    // First attempt with the user-entered date
+    const first = await query(isoDate);
+    if (!first) return null;
+
+    // Check if the departure local date matches what the agent entered
+    const depDate = localDepDate(first);
+    if (!depDate || depDate === isoDate) return first;
+
+    // Offset detected (e.g. agent enters 18 Apr, AeroDataBox returned 17 Apr departure).
+    // Retry with isoDate + offset so we get the flight that actually departs on isoDate.
+    const offsetDays = Math.round(
+      (new Date(isoDate + 'T00:00:00Z') - new Date(depDate + 'T00:00:00Z')) / 86400000
+    );
+    if (offsetDays < 1 || offsetDays > 2) return first; // only compensate for 1–2 day offsets
+    const second = await query(addDays(isoDate, offsetDays));
+    if (!second) return first;
+    return localDepDate(second) === isoDate ? second : first;
   }
 
   // Parse local datetime string from AeroDataBox (already local — do not pass through Date())
