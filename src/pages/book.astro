@@ -481,9 +481,21 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
     const list = document.getElementById('confirmed-flights-list');
     if (confirmedFlights.length === 0) { list.innerHTML = ''; return; }
     list.innerHTML = confirmedFlights.map((f, i) => {
-      const arrInfo = f.arrLocalDT
-        ? `<span class="text-white/40 text-xs ml-2">arrives ${fmtFlightDT(f.arrLocalDT)}${f.arrTZ ? ' ' + tzAbbr(f.arrTZ) : ''}</span>`
-        : '';
+        const arrInfo = f.arrLocalDT ? (() => {
+        const [dp, rest] = f.arrLocalDT.split(/[T ]/);
+        const tp = (rest || '').replace(/[+-]\d{2}:\d{2}$|Z$/, '');
+        const [, mm, dd] = (dp || '').split('-');
+        const [hh, min] = (tp || '').split(':');
+        const FULL_MONTHS = ['January','February','March','April','May','June',
+                             'July','August','September','October','November','December'];
+        const hi = parseInt(hh, 10);
+        const ampm = hi < 12 ? 'am' : 'pm';
+        const h12 = hi % 12 || 12;
+        const dateStr = dd && mm ? `${parseInt(dd,10)} ${FULL_MONTHS[parseInt(mm,10)-1]}` : '';
+        const timeStr = hh && min ? `${h12}:${min} ${ampm}` : '';
+        const tzStr = f.arrTZ ? ` ${f.arrTZ}` : '';
+        return `<span class="text-white/40 text-xs ml-2">arrives ${dateStr} ${timeStr}${tzStr}</span>`;
+      })() : '';
       return `
       <div class="flex items-center justify-between bg-white/5 border border-white/10 rounded px-4 py-3 text-sm">
         <div>
