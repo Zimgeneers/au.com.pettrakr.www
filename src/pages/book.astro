@@ -476,6 +476,11 @@ const airports = (airportsJson.data as { id: number; iataCode: string; name: str
   }
 
   function confirmFlight(data) {
+    if (confirmedFlights.some(f => f.qualified === data.qualified)) {
+      document.getElementById('lookup-error').textContent = `${data.qualified} has already been added.`;
+      document.getElementById('lookup-error').classList.remove('hidden');
+      return;
+    }
     confirmedFlights.push(data);
     document.getElementById('preview-area').innerHTML = '';
     document.getElementById('lookup-flight-number').value = '';
